@@ -3,18 +3,19 @@
 // har været det før (se hasLoggedInBefore, sat af sync.js). Vises af
 // router.js's render() i stedet for den ønskede rute, for alle ruter
 // undtagen /join — se den kommentar i router.js for hvorfor.
+//
+// E-mail + adgangskode, ikke en tilsendt kode — kræver ingen udgående
+// mail, så login virker uafhængigt af om projektets e-mail-udbyder er
+// sat op eller ramt af en rate-limit.
 import { t } from '../i18n.js';
 import { state } from '../data.js';
 import { render } from '../router.js';
 import { toast } from '../toast.js';
-import { sendLoginCode, confirmLogin } from '../sync.js';
+import { signInWithPassword, signUpWithPassword } from '../sync.js';
 
 export function isLoggedIn() {
   return !!state.hasLoggedInBefore;
 }
-
-let step = "idle"; // idle | code
-let stepEmail = "";
 
 export function renderLogin() {
   return `
@@ -22,60 +23,52 @@ export function renderLogin() {
       <p class="eyebrow" style="color:var(--ink-soft)">${t('appName')}</p>
       <h2>${t('loginGateTitle')}</h2>
       <p style="margin:0 0 20px;font-size:14px;color:var(--ink-soft);line-height:1.5">${t('loginGateIntro')}</p>
-      ${step === "code" ? `
-        <p style="margin:0 0 12px;font-size:14px;color:var(--ink-soft);line-height:1.5">${t('codeSentTo', stepEmail)}</p>
-        <div class="field" style="margin-bottom:10px">
-          <input type="text" inputmode="numeric" autocomplete="one-time-code" id="gate-code-input" placeholder="${t('codePlaceholder')}" />
-        </div>
-        <button class="btn btn-rust btn-block" data-action="gate-confirm">${t('confirmLoginBtn')}</button>
-        <button class="btn-ghost" data-action="gate-cancel" style="width:100%;margin-top:6px">${t('cancel')}</button>
-      ` : `
-        <div class="field" style="margin-bottom:10px">
-          <input type="email" id="gate-email-input" placeholder="${t('emailPlaceholder')}" />
-        </div>
-        <button class="btn btn-rust btn-block" data-action="gate-send">${t('sendLoginCode')}</button>
-      `}
+      <div class="field" style="margin-bottom:10px">
+        <input type="email" id="gate-email-input" placeholder="${t('emailPlaceholder')}" />
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <input type="password" id="gate-password-input" autocomplete="current-password" placeholder="${t('passwordPlaceholder')}" />
+      </div>
+      <button class="btn btn-rust btn-block" data-action="gate-signin">${t('signInBtn')}</button>
+      <button class="btn btn-block" data-action="gate-signup" style="margin-top:6px">${t('signUpBtn')}</button>
     </div>
   `;
 }
 
-export function wireLogin() {
-  document.querySelector('[data-action="gate-send"]')?.addEventListener("click", async () => {
-    const input = document.getElementById("gate-email-input");
-    const email = input.value.trim();
-    if (!email) { alert(t('emailRequired')); return; }
-    try {
-      await sendLoginCode(email);
-      step = "code";
-      stepEmail = email;
-      render();
-    } catch (err) {
-      console.error("sendLoginCode failed:", err);
-      alert(t('emailLinkFailed'));
-    }
-  });
+function readCredentials() {
+  const email = document.getElementById("gate-email-input").value.trim();
+  const password = document.getElementById("gate-password-input").value;
+  if (!email) { alert(t('emailRequired')); return null; }
+  if (!password) { alert(t('passwordRequired')); return null; }
+  return { email, password };
+}
 
-  document.querySelector('[data-action="gate-confirm"]')?.addEventListener("click", async () => {
-    const input = document.getElementById("gate-code-input");
-    const code = input.value.trim();
-    if (!code) { alert(t('codeRequired')); return; }
+export function wireLogin() {
+  document.querySelector('[data-action="gate-signin"]')?.addEventListener("click", async () => {
+    const creds = readCredentials();
+    if (!creds) return;
     if (state.adventures.length > 0 && !confirm(t('loginReplaceConfirm'))) return;
     try {
-      const email = stepEmail;
-      await confirmLogin(email, code);
-      step = "idle";
-      stepEmail = "";
-      toast(t('signedIn', email));
+      await signInWithPassword(creds.email, creds.password);
+      toast(t('signedIn', creds.email));
       render();
     } catch (err) {
-      console.error("confirmLogin failed:", err);
-      alert(t('codeInvalid'));
+      console.error("signInWithPassword failed:", err);
+      alert(err?.message || t('authFailedGeneric'));
     }
   });
 
-  document.querySelector('[data-action="gate-cancel"]')?.addEventListener("click", () => {
-    step = "idle";
-    stepEmail = "";
-    render();
+  document.querySelector('[data-action="gate-signup"]')?.addEventListener("click", async () => {
+    const creds = readCredentials();
+    if (!creds) return;
+    if (state.adventures.length > 0 && !confirm(t('loginReplaceConfirm'))) return;
+    try {
+      await signUpWithPassword(creds.email, creds.password);
+      toast(t('signedIn', creds.email));
+      render();
+    } catch (err) {
+      console.error("signUpWithPassword failed:", err);
+      alert(err?.message || t('authFailedGeneric'));
+    }
   });
 }
