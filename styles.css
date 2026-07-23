@@ -1073,6 +1073,7 @@ html.is-native-app #app {
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+  touch-action: pan-y; /* lader vertikal scroll virke nativt — se dismissible.js for hvornår et nedadtræk i stedet lukker */
 }
 
 .modal-handle {
@@ -1141,6 +1142,7 @@ html.is-native-app #app {
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
+  touch-action: pan-y;
 }
 
 .sheet-handle {
@@ -1205,6 +1207,20 @@ html.is-native-app #app {
 
 .sheet-action.danger { color: var(--rust); }
 .sheet-action.danger:hover { background: rgba(193, 99, 58, 0.06); }
+
+/* Selve trækket (dismissible.js) virker uændret under reduceret bevægelse
+   — kun de animerede overgange (luk-glid, spring-tilbage, baggrunds-
+   falmning) falder væk, ved at koden selv springer transition/setTimeout
+   over. Dette er et sikkerhedsnet for de tilfælde, hvor en transition
+   alligevel når at blive sat inline, før den JS-side afgørelse rammer. */
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .modal,
+  .sheet-backdrop,
+  .modal-backdrop {
+    transition: none !important;
+  }
+}
 
 /* ---------- Form ---------- */
 .field {

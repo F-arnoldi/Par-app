@@ -10,6 +10,7 @@ import { t, locale } from '../i18n.js';
 import { cap, toISO, esc } from '../utils.js';
 import { WEEKDAYS } from '../constants.js';
 import { state } from '../data.js';
+import { attachDragToDismiss } from './dismissible.js';
 
 export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm, opts = {}) {
   const singleOnly = !!opts.singleOnly;
@@ -22,8 +23,9 @@ export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm,
   const rootEl = document.getElementById("picker-root");
 
   // DOM-referencer sat af mount(), gridEl genpeget af goToMonth()
-  let sheetEl, gridViewportEl, gridEl, monthLabelEl, singleToggleEl;
+  let sheetEl, backdropEl, gridViewportEl, gridEl, monthLabelEl, singleToggleEl;
   let startChipEl, endChipEl, endChipWrapEl;
+  let dismiss = null; // sat af mount() — attachDragToDismiss's fælles lukke-animation
 
   // Peger på den igangværende træk-gestus, eller null. originIso er den
   // celle, hvor pointerdown skete — det er den, der afgør både om det
@@ -111,6 +113,7 @@ export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm,
     `;
 
     sheetEl = rootEl.querySelector(".dp-sheet");
+    backdropEl = rootEl.querySelector(".dp-backdrop");
     gridViewportEl = rootEl.querySelector(".dp-grid-viewport");
     gridEl = rootEl.querySelector(".dp-grid");
     monthLabelEl = rootEl.querySelector(".dp-month");
@@ -118,6 +121,11 @@ export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm,
     startChipEl = rootEl.querySelector('[data-chip="start"]');
     endChipEl = rootEl.querySelector('[data-chip="end"]');
     endChipWrapEl = rootEl.querySelector('[data-chip-wrap="end"]');
+
+    // Datovælgeren bygger sin egen .sheet-markup direkte herover i stedet
+    // for at kalde openSheet(), så den kobler træk-for-at-luk til
+    // eksplicit — samme fælles lukke-animation som resten af appen.
+    dismiss = attachDragToDismiss(sheetEl, backdropEl, () => { rootEl.innerHTML = ""; });
 
     // ---- Lyttere: sættes op ÉN gang, aldrig igen ----
     rootEl.querySelector("[data-picker-backdrop]").addEventListener("click", e => {
@@ -309,7 +317,7 @@ export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm,
   }
 
   function close() {
-    rootEl.innerHTML = "";
+    dismiss();
   }
 
   mount();

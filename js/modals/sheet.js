@@ -9,6 +9,9 @@ import { openAdventureModal } from './adventure.js';
 import { openInviteModal } from './invite.js';
 import { downloadICS } from '../ics.js';
 import { syncStatus } from '../sync.js';
+import { attachDragToDismiss } from './dismissible.js';
+
+let currentClose = null;
 
 export function openSheet(html) {
   const root = document.getElementById("sheet-root");
@@ -20,13 +23,22 @@ export function openSheet(html) {
       </div>
     </div>
   `;
-  root.querySelector("[data-sheet-backdrop]").addEventListener("click", e => {
+  const backdrop = root.querySelector("[data-sheet-backdrop]");
+  const panel = root.querySelector(".sheet");
+  currentClose = attachDragToDismiss(panel, backdrop, () => {
+    root.innerHTML = "";
+    currentClose = null;
+  });
+
+  backdrop.addEventListener("click", e => {
     if (e.target.hasAttribute("data-sheet-backdrop")) closeSheet();
   });
 }
 
+// Samme udgang uanset udløser — se attachDragToDismiss. Kaldes også
+// programmatisk fra handlerne herunder, når et menupunkt vælges.
 export function closeSheet() {
-  document.getElementById("sheet-root").innerHTML = "";
+  currentClose?.();
 }
 
 export function openDetailMenu(a) {
