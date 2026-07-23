@@ -407,18 +407,50 @@ async function afterAuthSuccess(session) {
   await runSync();
 }
 
-export async function signUpWithPassword(email, password) {
+export async function signUpWithPassword(email, password, name) {
   if (!supabase) throw new Error("sync not initialized");
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) throw error;
   if (!data.session) throw new Error("Kontoen blev oprettet, men kræver en e-mail-bekræftelse, der ikke kan afsendes lige nu.");
   await afterAuthSuccess(data.session);
+  // Sættes EFTER afterAuthSuccess, som via resetLocalTripData() nulstiller
+  // myDisplayName til tomt — ellers ville navnet her blive overskrevet med
+  // det samme.
+  state.myDisplayName = name;
+  saveData();
+  try {
+    await saveDisplayName(name);
+  } catch {
+    // Navnet er gemt lokalt og sendes med ved næste almindelige sync —
+    // en fejl her skal ikke vælte selve kontooprettelsen.
+  }
 }
 
 export async function signInWithPassword(email, password) {
   if (!supabase) throw new Error("sync not initialized");
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  await afterAuthSuccess(data.session);
+}
+
+// ---------- Glemt adgangskode ----------
+// Samme princip som resten af auth-flowet: en 6-cifret kode, aldrig et
+// klikbart link. requestPasswordReset sender koden; confirmPasswordReset
+// bekræfter den OG sætter den nye adgangskode i samme kald, så et gennemført
+// flow ender med en logget-ind session, ikke bare en nulstillet kode man
+// stadig skal logge ind med bagefter.
+export async function requestPasswordReset(email) {
+  if (!supabase) throw new Error("sync not initialized");
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+}
+
+export async function confirmPasswordReset(email, code, newPassword) {
+  if (!supabase) throw new Error("sync not initialized");
+  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "recovery" });
+  if (error) throw error;
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  if (updateError) throw updateError;
   await afterAuthSuccess(data.session);
 }
 
