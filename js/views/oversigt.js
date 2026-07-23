@@ -4,9 +4,8 @@ import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO } from '../u
 import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing } from '../selectors.js';
 import { openAdventureModal } from '../modals/adventure.js';
 import { state, saveData } from '../data.js';
-import { render } from '../router.js';
-import { toast } from '../toast.js';
-import { hasLinkedEmail, linkEmail } from '../sync.js';
+import { navigate, render } from '../router.js';
+import { hasLinkedEmail } from '../sync.js';
 
 export function renderOversigtTab(a) {
   const sparet    = totalSparet(a.id);
@@ -126,10 +125,7 @@ export function renderOversigtTab(a) {
     <div class="paper">
       <p class="paper-eyebrow">${t('emailPromptEyebrow')}</p>
       <p style="margin:0 0 12px;font-size:14px;color:var(--ink-soft);line-height:1.5">${t('emailPromptText')}</p>
-      <div class="field" style="margin-bottom:10px">
-        <input type="email" id="email-prompt-input" placeholder="${t('emailPlaceholder')}" />
-      </div>
-      <button class="btn btn-rust btn-block" data-action="link-email">${t('emailPromptLink')}</button>
+      <button class="btn btn-rust btn-block" data-action="go-profile-email">${t('emailPromptLink')}</button>
       <button class="btn-ghost" data-action="dismiss-email-prompt" style="width:100%;margin-top:6px">${t('emailPromptDismiss')}</button>
     </div>
   ` : "";
@@ -173,15 +169,5 @@ export function wireOversigt(a) {
     render();
   });
 
-  document.querySelector('[data-action="link-email"]')?.addEventListener("click", async () => {
-    const input = document.getElementById("email-prompt-input");
-    const email = input.value.trim();
-    if (!email) { alert(t('emailRequired')); return; }
-    try {
-      await linkEmail(email);
-      toast(t('emailLinkSent'));
-    } catch {
-      alert(t('emailLinkFailed'));
-    }
-  });
+  document.querySelector('[data-action="go-profile-email"]')?.addEventListener("click", () => navigate("/profile"));
 }

@@ -7,7 +7,7 @@
 // top-level import af 'https://esm.sh/...' — kun initSync() gør det,
 // via dynamisk import(), indpakket i try/catch af kalderen.
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
-import { state, saveData, onDataSaved, touch } from './data.js';
+import { state, saveData, onDataSaved, touch, resetLocalTripData } from './data.js';
 
 let supabase = null;
 let syncInFlight = false;
@@ -386,13 +386,60 @@ async function doInitSync() {
   scheduleSync();
 }
 
+// Al e-mail-auth herfra bruger en 6-cifret kode, ALDRIG et klikbart link.
+// Et magic-link's PKCE code_verifier bor kun i den browser-kontekst der
+// bad om linket — åbnes det i en anden app/webview (fx Mail-appen på en
+// enhed, mens linket blev bedt om inde i Capacitor-appen på samme eller en
+// anden enhed), fejler udvekslingen. En kode tastet direkte tilbage i
+// SAMME appinstans har intet af det problem.
+
+// Knytter en e-mail til den NUVÆRENDE (typisk anonyme) session — bevarer
+// dens auth.uid() og dermed ejerskabet af alt, der allerede er skabt på
+// denne enhed. Bekræftes med verifyLinkEmail().
 export async function linkEmail(email) {
   if (!supabase) throw new Error("sync not initialized");
-  const { error } = await supabase.auth.updateUser(
-    { email },
-    { emailRedirectTo: location.origin + location.pathname }
-  );
+  const { error } = await supabase.auth.updateUser({ email });
   if (error) throw error;
+}
+
+export async function verifyLinkEmail(email, code) {
+  if (!supabase) throw new Error("sync not initialized");
+  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email_change" });
+  if (error) throw error;
+  hasLinkedEmail = !!data.session?.user?.email;
+  myEmail = data.session?.user?.email || null;
+}
+
+// Logger ind som en ALLEREDE EKSISTERENDE konto (typisk fra en anden
+// enhed) — modsat linkEmail ovenfor skifter dette hvilken auth.uid()
+// denne enhed kører som. Bekræftes med confirmLogin().
+export async function sendLoginCode(email) {
+  if (!supabase) throw new Error("sync not initialized");
+  const { error } = await supabase.auth.signInWithOtp({ email });
+  if (error) throw error;
+}
+
+// Kalderen (UI-laget) har ansvaret for at advare brugeren FØR dette kald,
+// hvis enheden har lokale rejser der ville forsvinde — se
+// resetLocalTripData(). Efter et identitetsskifte er enhedens lokale
+// visning kontoens data, ikke en blanding af to konti.
+export async function confirmLogin(email, code) {
+  if (!supabase) throw new Error("sync not initialized");
+  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+  if (error) throw error;
+  hasLinkedEmail = !!data.session?.user?.email;
+  myEmail = data.session?.user?.email || null;
+  resetLocalTripData();
+  await runSync();
+}
+
+export async function signOut() {
+  if (!supabase) throw new Error("sync not initialized");
+  resetLocalTripData();
+  await supabase.auth.signOut();
+  hasLinkedEmail = false;
+  myEmail = null;
+  await supabase.auth.signInAnonymously();
 }
 
 // ---------- Invitationsflow (Fase 4) ----------

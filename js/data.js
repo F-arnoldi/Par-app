@@ -117,3 +117,18 @@ export function tombstone(record) {
   record.deletedAt = new Date().toISOString();
   return touch(record);
 }
+
+// Kaldes ved log ud og ved login til en anden konto — rejsedata hører til
+// KONTOEN, ikke enheden, så et identitetsskifte skal starte enheden helt
+// forfra frem for at blande to konti sammen. Sprogvalg (lang) er en
+// enhedspræference og bevares bevidst.
+export function resetLocalTripData() {
+  state.adventures = [];
+  state.activities = [];
+  state.savings = [];
+  state.plans = {};
+  state.lastSyncedAt = null;
+  state.emailPromptDismissed = false;
+  state.myDisplayName = "";
+  saveData();
+}
