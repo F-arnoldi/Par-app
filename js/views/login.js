@@ -49,7 +49,8 @@ export function wireLogin() {
       step = "code";
       stepEmail = email;
       render();
-    } catch {
+    } catch (err) {
+      console.error("sendLoginCode failed:", err);
       alert(t('emailLinkFailed'));
     }
   });
@@ -66,7 +67,8 @@ export function wireLogin() {
       stepEmail = "";
       toast(t('signedIn', email));
       render();
-    } catch {
+    } catch (err) {
+      console.error("confirmLogin failed:", err);
       alert(t('codeInvalid'));
     }
   });
