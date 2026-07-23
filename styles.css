@@ -32,15 +32,16 @@ html, body {
   margin: 0;
   padding: 0;
   background:
-    radial-gradient(circle at 15% 10%, rgba(196, 210, 240, 0.55) 0%, transparent 55%),
-    radial-gradient(circle at 85% 25%, rgba(240, 205, 185, 0.5) 0%, transparent 55%),
-    radial-gradient(circle at 50% 95%, rgba(200, 225, 210, 0.45) 0%, transparent 55%),
-    #E9EBF0;
+    radial-gradient(circle at 20% 0%, rgba(196, 210, 240, 0.6) 0%, transparent 45%),
+    radial-gradient(circle at 100% 30%, rgba(240, 205, 185, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 10% 90%, rgba(200, 225, 210, 0.5) 0%, transparent 45%),
+    var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.4;
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -54,124 +55,38 @@ button { font-family: inherit; }
   flex-shrink: 0;
 }
 
-/* ---------- iPhone frame ---------- */
+/* ---------- Layout-wrapper ---------- */
+/* Ren bredde-styring — ingen ramme, intet hak, ingen falsk statuslinje.
+   Én bredde-baseret grænse dækker browser, installeret PWA og den native
+   app ens, fordi en rigtig telefon altid er under 520px bred uanset
+   hvilken af de tre den er. Under 520px fylder den hele bredden — det
+   ER skærmen. Fra 520px og op bliver den en centreret præsentations-
+   flade: en ærlig indramning af indhold, ikke en efterligning af en
+   telefon (deraf ingen falsk statuslinje). */
 .device {
-  background:
-    radial-gradient(circle at 20% 0%, rgba(196, 210, 240, 0.6) 0%, transparent 45%),
-    radial-gradient(circle at 100% 30%, rgba(240, 205, 185, 0.55) 0%, transparent 45%),
-    radial-gradient(circle at 10% 90%, rgba(200, 225, 210, 0.5) 0%, transparent 45%),
-    var(--paper);
-  max-width: 420px;
-  margin: 32px auto;
-  min-height: calc(100vh - 64px);
-  border-radius: 44px;
-  border: 10px solid #1C1D21;
-  box-shadow: 0 24px 60px rgba(20, 20, 24, 0.28), inset 0 0 0 1px rgba(255,255,255,0.05);
-  overflow: hidden;
   position: relative;
+  overflow: hidden;
 }
 
-.device-notch {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 110px;
-  height: 24px;
-  background: #1C1D21;
-  border-radius: 0 0 18px 18px;
-  z-index: 10;
-}
-
-.device-status {
-  height: 44px;
-  padding: 14px 28px 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.status-icons {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-.status-dot.dim { background: var(--ink-faint); }
-
-@media (max-width: 500px) {
-  body { background: var(--paper); }
+@media (min-width: 520px) {
   .device {
-    margin: 0;
-    max-width: 100%;
-    min-height: 100vh;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
+    max-width: 480px;
+    margin: 32px auto;
+    border-radius: 32px;
+    box-shadow: 0 24px 60px rgba(20, 20, 24, 0.18);
   }
-  .device-notch { display: none; }
-  .device-status { padding-top: env(safe-area-inset-top, 8px); }
-}
-
-/* Installeret/pakket som rigtig app: den tegnede telefon-ramme og falske
-   "9:41"-statuslinje er kun en visuel attrap til at forhåndsvise appen i
-   en almindelig browser-fane. Kørt installeret (PWA) eller inde i den
-   native Capacitor-skal viser OS'et sin egen rigtige statuslinje, så
-   attrappen skal væk — ellers ville brugeren se to statuslinjer oven i
-   hinanden. To forskellige detektionsmåder, samme resultat:
-   - display-mode: standalone opdages af browseren for en installeret PWA.
-   - html.is-native-app sættes af index.html's inline-script, da Capacitor
-     ikke rapporterer sig selv via display-mode (det er ikke en PWA-
-     installation, men en separat WKWebView-app-pakke). */
-@media (display-mode: standalone) {
-  body { background: var(--paper); }
-  .device {
-    margin: 0;
-    max-width: 100%;
-    min-height: 100vh;
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
-  }
-  .device-notch,
-  .device-status {
-    display: none;
-  }
-  #app {
-    padding-top: calc(4px + env(safe-area-inset-top, 0px));
-  }
-}
-
-html.is-native-app body { background: var(--paper); }
-html.is-native-app .device {
-  margin: 0;
-  max-width: 100%;
-  min-height: 100vh;
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-}
-html.is-native-app .device-notch,
-html.is-native-app .device-status {
-  display: none;
-}
-html.is-native-app #app {
-  padding-top: calc(4px + env(safe-area-inset-top, 0px));
 }
 
 #app {
-  padding: 4px 22px 110px;
-  min-height: calc(100vh - 64px - 44px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* 100vh på mobil Safari inkluderer arealet bag den dynamiske adresse-
+     linje — dvh er den rigtige, synligt-areal-baserede enhed. vh-linjen
+     står som fallback for browsere uden dvh-understøttelse. */
+  padding-top: calc(4px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(clamp(16px, 5vw, 24px) + env(safe-area-inset-left, 0px));
+  padding-right: calc(clamp(16px, 5vw, 24px) + env(safe-area-inset-right, 0px));
 }
 
 /* ---------- Home top bar ---------- */
@@ -199,6 +114,11 @@ html.is-native-app #app {
   padding: 6px 8px;
   line-height: 1;
   border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .icon-only .icon { width: 19px; height: 19px; }
@@ -475,7 +395,10 @@ html.is-native-app #app {
   font-weight: 400;
 }
 
-@media (min-width: 501px) {
+/* Følger .device's egen bredde-grænse — fra 520px er den ikke længere
+   fastgjort til browservinduets bund, men til app-søjlens egen boks
+   (.device har position:relative). */
+@media (min-width: 520px) {
   .fab {
     position: absolute;
     left: 50%;
@@ -1117,6 +1040,11 @@ html.is-native-app #app {
   cursor: pointer;
   padding: 4px 8px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* ---------- Bottom sheet (menu) ---------- */

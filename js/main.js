@@ -52,3 +52,21 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   });
 }
+
+// I den native app skal statuslinjen overlejre webviewet, så CSS'ens
+// egne env(safe-area-inset-top)-paddinger (på #app) gør arbejdet med at
+// holde indhold under den — ellers ville OS'et selv skubbe hele siden
+// ned og efterlade et dobbelt mellemrum. window.Capacitor findes kun
+// native; stilfærdigt ingenting i browseren eller uden pluginet
+// registreret, samme mønster som Haptics.
+(async () => {
+  try {
+    const StatusBar = window.Capacitor?.Plugins?.StatusBar;
+    if (!StatusBar) return;
+    await StatusBar.setOverlaysWebView({ overlay: true });
+    await StatusBar.setStyle({ style: "LIGHT" }); // mørke ikoner/tekst, til appens lyse baggrund
+    await StatusBar.setBackgroundColor({ color: "#EDEFF4" });
+  } catch {
+    // Web, eller pluginet er ikke registreret native — stilfærdigt ingenting.
+  }
+})();
