@@ -6,6 +6,7 @@ import { renderDetail, wireDetail } from './views/detail.js';
 import { renderCalendar, wireCalendar } from './views/calendar.js';
 import { renderProfile, wireProfile } from './views/profile.js';
 import { handleJoin } from './views/join.js';
+import { renderLogin, wireLogin, isLoggedIn } from './views/login.js';
 
 export function parseRoute() {
   const hash = location.hash.replace(/^#\/?/, "");
@@ -45,6 +46,18 @@ export function render() {
   const route = parseRoute();
   const root = document.getElementById("app");
   let scrollToToday = false;
+
+  // /join er den eneste undtagelse: en invitation skal kunne åbnes af en
+  // helt ny modtager, der endnu ikke har logget ind — handleJoin virker
+  // allerede fint på en anonym session. Alle andre ruter kræver enten et
+  // bekræftet login, eller at enheden har været logget ind før (se
+  // isLoggedIn() / hasLoggedInBefore for hvorfor det virker offline).
+  if (route.name !== "join" && !isLoggedIn()) {
+    root.innerHTML = renderLogin();
+    wireLogin();
+    lastHash = currentHash;
+    return;
+  }
 
   if (route.name === "join") {
     // Fire-and-forget: handleJoin selv navigerer videre (eller viser en

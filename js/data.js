@@ -80,8 +80,13 @@ export function defaultData() {
     savings: [],
     plans: {},
     lastSyncedAt: null,
-    emailPromptDismissed: false,
     myDisplayName: "",
+    // Rent lokalt, aldrig fra serveren — sat af sync.js efter et bekræftet
+    // login, læst synkront (ingen netværkskald) af router.js' login-gate.
+    // Det er det, der lader en tidligere logget-ind enhed åbne appen med
+    // det samme offline, i stedet for at hænge og vente på at bekræfte
+    // sessionen mod Supabase, før noget som helst kan vises.
+    hasLoggedInBefore: false,
   };
 }
 
@@ -128,7 +133,6 @@ export function resetLocalTripData() {
   state.savings = [];
   state.plans = {};
   state.lastSyncedAt = null;
-  state.emailPromptDismissed = false;
   state.myDisplayName = "";
   saveData();
 }

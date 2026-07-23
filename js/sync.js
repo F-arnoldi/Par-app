@@ -386,33 +386,18 @@ async function doInitSync() {
   scheduleSync();
 }
 
-// Al e-mail-auth herfra bruger en 6-cifret kode, ALDRIG et klikbart link.
-// Et magic-link's PKCE code_verifier bor kun i den browser-kontekst der
-// bad om linket — åbnes det i en anden app/webview (fx Mail-appen på en
-// enhed, mens linket blev bedt om inde i Capacitor-appen på samme eller en
-// anden enhed), fejler udvekslingen. En kode tastet direkte tilbage i
-// SAMME appinstans har intet af det problem.
+// E-mail-login bruger en 6-cifret kode, ALDRIG et klikbart link. Et magic-
+// link's PKCE code_verifier bor kun i den browser-kontekst der bad om
+// linket — åbnes det i en anden app/webview (fx Mail-appen på en enhed,
+// mens linket blev bedt om inde i Capacitor-appen på samme eller en anden
+// enhed), fejler udvekslingen. En kode tastet direkte tilbage i SAMME
+// appinstans har intet af det problem.
 
-// Knytter en e-mail til den NUVÆRENDE (typisk anonyme) session — bevarer
-// dens auth.uid() og dermed ejerskabet af alt, der allerede er skabt på
-// denne enhed. Bekræftes med verifyLinkEmail().
-export async function linkEmail(email) {
-  if (!supabase) throw new Error("sync not initialized");
-  const { error } = await supabase.auth.updateUser({ email });
-  if (error) throw error;
-}
-
-export async function verifyLinkEmail(email, code) {
-  if (!supabase) throw new Error("sync not initialized");
-  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email_change" });
-  if (error) throw error;
-  hasLinkedEmail = !!data.session?.user?.email;
-  myEmail = data.session?.user?.email || null;
-}
-
-// Logger ind som en ALLEREDE EKSISTERENDE konto (typisk fra en anden
-// enhed) — modsat linkEmail ovenfor skifter dette hvilken auth.uid()
-// denne enhed kører som. Bekræftes med confirmLogin().
+// Sender en login-kode til en e-mail — findes kontoen allerede logges der
+// ind på den (typisk fra en anden enhed), findes den ikke oprettes den
+// stiltiende med det samme (Supabase's shouldCreateUser-default). Samme
+// kald dækker altså både "log ind" og "opret konto". Bekræftes med
+// confirmLogin().
 export async function sendLoginCode(email) {
   if (!supabase) throw new Error("sync not initialized");
   const { error } = await supabase.auth.signInWithOtp({ email });
@@ -429,12 +414,16 @@ export async function confirmLogin(email, code) {
   if (error) throw error;
   hasLinkedEmail = !!data.session?.user?.email;
   myEmail = data.session?.user?.email || null;
+  // Sættes FØR resetLocalTripData(), som selv kalder saveData() — sikrer
+  // ét samlet, atomart skriv af begge felter i stedet for to.
+  state.hasLoggedInBefore = true;
   resetLocalTripData();
   await runSync();
 }
 
 export async function signOut() {
   if (!supabase) throw new Error("sync not initialized");
+  state.hasLoggedInBefore = false;
   resetLocalTripData();
   await supabase.auth.signOut();
   hasLinkedEmail = false;
