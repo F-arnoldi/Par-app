@@ -793,6 +793,89 @@ button { font-family: inherit; }
 
 .icon-btn:hover { color: var(--rust); background: var(--paper-deep); }
 
+/* Rigere aktivitets-kort (Program-fanen) */
+.item.act-card {
+  align-items: flex-start;
+  cursor: pointer;
+}
+.item.act-card:hover { background: var(--paper-deep); }
+.item.act-card .item-icon { margin-top: 1px; }
+.item.act-card .item-price { padding-top: 1px; }
+
+.item.act-card .item-title {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.is-idea { background: var(--rust); }
+.status-dot.is-booket {
+  background: transparent;
+  border: 1.2px solid var(--sage);
+  box-sizing: border-box;
+}
+.status-dot.is-betalt { background: var(--sage); }
+
+.item-place {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+}
+
+.item-address {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--rust);
+  margin: 4px 0 0;
+  text-decoration: none;
+  white-space: pre-line;
+}
+.item-address:hover { text-decoration: underline; }
+
+.item-notes {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 6px 0 0;
+  white-space: pre-line;
+}
+
+.item-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.item-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.item-chip:hover { color: var(--rust); }
+.item-chip .icon { width: 12px; height: 12px; }
+
 .total-row {
   display: flex;
   justify-content: space-between;
@@ -1166,6 +1249,12 @@ button { font-family: inherit; }
   gap: 10px;
 }
 
+.status-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
 .type-option {
   display: flex;
   flex-direction: column;
@@ -1534,13 +1623,12 @@ button { font-family: inherit; }
   margin-top: 3px;
 }
 
-.cal-dot.dashed {
-  background: transparent;
-  border: 1px dashed var(--ink-faint);
-  width: 8px;
-  height: 8px;
-  margin-top: 2px;
+.cal-dots-row {
+  display: flex;
+  gap: 2px;
+  margin-top: 3px;
 }
+.cal-dots-row .cal-dot { margin-top: 0; }
 
 .cal-legend {
   display: flex;
@@ -1572,14 +1660,6 @@ button { font-family: inherit; }
   border-radius: 50%;
   background: var(--sage);
 }
-.legend-dash {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px dashed var(--ink-faint);
-  background: transparent;
-}
 
 /* ---------- Toast ---------- */
 .toast {
@@ -1603,4 +1683,45 @@ button { font-family: inherit; }
   15% { opacity: 1; transform: translate(-50%, 0); }
   85% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, -6px); }
+}
+
+.toast.toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  max-width: min(340px, calc(100% - 48px));
+}
+
+.toast-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--rust);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--cream);
+  opacity: 0.6;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.toast-close:hover { opacity: 1; }
+
+@keyframes toastFadeIn {
+  0% { opacity: 0; transform: translate(-50%, 12px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.toast.toast-persistent {
+  animation: toastFadeIn 0.2s ease forwards;
 }
