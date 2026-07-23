@@ -424,6 +424,12 @@ export async function signInWithPassword(email, password) {
 
 export async function signOut() {
   if (!supabase) throw new Error("sync not initialized");
+  // Flusher enhver endnu ikke-afsendt lokal ændring til kontoen FØR den
+  // ryddes herunder — ellers ville fx en rejse oprettet lige før log ud
+  // kunne nå at blive slettet lokalt, før den next runSync() (800ms
+  // debounce) overhovedet har haft en chance for at sende den.
+  clearTimeout(debounceTimer);
+  await runSync();
   state.hasLoggedInBefore = false;
   resetLocalTripData();
   await supabase.auth.signOut();
