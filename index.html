@@ -11,6 +11,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Nyt Eventyr" />
+  <script>
+    // Kører synkront, før CSS males, for at undgå et blink af det forkerte
+    // layout. Capacitor's native runtime indsprøjter et window.Capacitor-
+    // objekt i siden, selv når den (som her) loader en fjern-URL — det er
+    // sådan appen kan skelne "kører i den native app-skal" fra "kører i en
+    // almindelig browser-fane", uden at have @capacitor/core som afhængighed.
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      document.documentElement.classList.add("is-native-app");
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">

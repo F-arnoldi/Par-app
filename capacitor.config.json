@@ -1,0 +1,10 @@
+{
+  "appId": "dk.nyteventyr.app",
+  "appName": "Nyt Eventyr",
+  "webDir": "native-shell",
+  "server": {
+    "url": "https://f-arnoldi.github.io/Par-app/",
+    "cleartext": false
+  },
+  "backgroundColor": "#EFE4CC"
+}
