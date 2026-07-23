@@ -6,8 +6,21 @@ import { openModal } from './modal.js';
 import { toast } from '../toast.js';
 
 export function openInviteModal(a) {
-  const kode = a.id.slice(0, 6).toUpperCase();
-  const link = `${location.origin}${location.pathname}#/adventure/${a.id}`;
+  // Der er intet rigtigt link at dele, før eventyret findes på serveren —
+  // join_token kommer fra samme række som serverId og er kun kendt lokalt
+  // efter mindst én vellykket synkronisering.
+  if (!a.serverId || !a.joinToken) {
+    openModal(`
+      <div class="modal-header">
+        <h2>${t('invitePartnerTitle')}</h2>
+        <button class="modal-close" data-modal-close>✕</button>
+      </div>
+      <p style="color:var(--ink-soft);font-size:14px;line-height:1.5;margin:0">${t('inviteNotSyncedYet')}</p>
+    `);
+    return;
+  }
+
+  const link = `${location.origin}${location.pathname}#/join/${a.serverId}/${a.joinToken}`;
 
   openModal(`
     <div class="modal-header">
@@ -15,15 +28,9 @@ export function openInviteModal(a) {
       <button class="modal-close" data-modal-close>✕</button>
     </div>
 
-    <p style="color:var(--ink-soft);font-size:14px;margin:0 0 12px;line-height:1.5">
+    <p style="color:var(--ink-soft);font-size:14px;margin:0 0 16px;line-height:1.5">
       ${t('inviteIntro')}
     </p>
-
-    <div class="invite-code-box">
-      <p class="invite-eyebrow">${t('inviteCode')}</p>
-      <p class="invite-code">${kode}</p>
-      <p class="invite-hint">"${esc(a.navn)}"</p>
-    </div>
 
     <div class="field">
       <label>${t('previewLabel')}</label>

@@ -1,5 +1,4 @@
 // ---------- Liste (forside) ----------
-import { state } from '../data.js';
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { esc, formatMonoRange, formatKr, heroCountdown, shortCountdown } from '../utils.js';
@@ -7,13 +6,14 @@ import { totalSparet, upcomingAdventures, ideaAdventures, pastAdventures } from 
 import { navigate } from '../router.js';
 import { openAdventureModal } from '../modals/adventure.js';
 import { openAppMenu } from '../modals/sheet.js';
+import { syncStatus } from '../sync.js';
 
 export function renderList() {
   const upcoming = upcomingAdventures();
   const ideas = ideaAdventures();
   const past = pastAdventures();
 
-  if (state.adventures.length === 0) {
+  if (upcoming.length === 0 && ideas.length === 0 && past.length === 0) {
     return `
       ${renderHomeTop()}
       <div class="hero-empty">
@@ -66,11 +66,20 @@ export function renderList() {
   `;
 }
 
+function syncIndicatorOffline() {
+  // "error" behandles roligt som "ikke forbundet lige nu" — samme visuelle
+  // tilstand som offline, ingen alarmerende fejlmeddelelse.
+  return !navigator.onLine || syncStatus.state === "error" || syncStatus.state === "offline";
+}
+
 export function renderHomeTop() {
   return `
     <div class="home-top">
       <span class="brand">${t('appName')}</span>
-      <button class="icon-only" data-action="app-menu" aria-label="${t('menu')}">${icon("menu")}</button>
+      <div class="home-top-actions">
+        <button class="icon-only sync-indicator ${syncIndicatorOffline() ? "is-offline" : ""}" data-action="app-menu" aria-label="${t('syncStatus')}">${icon("cloud")}</button>
+        <button class="icon-only" data-action="app-menu" aria-label="${t('menu')}">${icon("menu")}</button>
+      </div>
     </div>
   `;
 }
@@ -138,6 +147,26 @@ export function renderIdeaRow(a) {
   `;
 }
 
+// Registreres kun én gang for hele sidens levetid (ikke ved hvert kald af
+// wireList — window-lyttere overlever en re-render, i modsætning til
+// lyttere sat direkte på DOM-elementer, så gentagne tilmeldinger ville
+// hobe sig op for hver gang forsiden vises igen). Slår altid det/de
+// indikator-element(er) op der findes LIGE NU, i stedet for at gemme en
+// reference fra tilmeldings-tidspunktet — så den altid rammer den aktuelle
+// render, uanset hvor mange gange DOM'en er blevet skiftet ud siden.
+let offlineListenerRegistered = false;
+function ensureOfflineListener() {
+  if (offlineListenerRegistered) return;
+  offlineListenerRegistered = true;
+  const update = () => {
+    document.querySelectorAll(".sync-indicator").forEach(el => {
+      el.classList.toggle("is-offline", syncIndicatorOffline());
+    });
+  };
+  window.addEventListener("online", update);
+  window.addEventListener("offline", update);
+}
+
 export function wireList() {
   document.querySelector(".hero")?.addEventListener("click", (e) => {
     navigate(`/adventure/${e.currentTarget.dataset.id}`);
@@ -148,5 +177,8 @@ export function wireList() {
   document.querySelectorAll('[data-action="new"]').forEach(el => {
     el.addEventListener("click", () => openAdventureModal());
   });
-  document.querySelector('[data-action="app-menu"]')?.addEventListener("click", openAppMenu);
+  document.querySelectorAll('[data-action="app-menu"]').forEach(el => {
+    el.addEventListener("click", openAppMenu);
+  });
+  ensureOfflineListener();
 }

@@ -4,7 +4,7 @@ import { formatKr, formatMonoDate, todayISO } from '../utils.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { savingsFor, totalSparet, planFor } from '../selectors.js';
-import { state, saveData, uid } from '../data.js';
+import { state, saveData, uid, touch, tombstone } from '../data.js';
 import { toast } from '../toast.js';
 import { render } from '../router.js';
 
@@ -86,7 +86,7 @@ export function wireOpsparing(a) {
     const notat = document.getElementById("save-note").value.trim();
     if (!amt || amt <= 0) { alert(t('amountValidation')); return; }
     if (!dato) { alert(t('dateValidation')); return; }
-    state.savings.push({ id: uid(), adventureId: a.id, beløb: amt, dato, notat });
+    state.savings.push(touch({ id: uid(), adventureId: a.id, beløb: amt, dato, notat }));
     saveData();
     toast(t('paymentLogged'));
     render();
@@ -97,6 +97,11 @@ export function wireOpsparing(a) {
     const freq = document.getElementById("plan-freq").value;
     if (!amt || amt <= 0) { alert(t('amountValidation')); return; }
     state.plans[a.id] = { planlagtBeløb: amt, frekvens: freq };
+    // Spareplanen foldes ind i eventyr-rækken ved sync (planlagt_beloeb/
+    // frekvens-kolonner), så det er forældre-eventyret der skal touch()'es
+    // — planen har intet eget dirty-signal at synkronisere på ellers.
+    const idx = state.adventures.findIndex(x => x.id === a.id);
+    if (idx >= 0) touch(state.adventures[idx]);
     saveData();
     toast(t('planSaved'));
     render();
@@ -105,7 +110,8 @@ export function wireOpsparing(a) {
   document.querySelectorAll("[data-del-saving]").forEach(el => {
     el.addEventListener("click", () => {
       if (confirm(t('confirmDeletePayment'))) {
-        state.savings = state.savings.filter(x => x.id !== el.dataset.delSaving);
+        const s = state.savings.find(x => x.id === el.dataset.delSaving);
+        if (s) tombstone(s);
         saveData();
         render();
       }

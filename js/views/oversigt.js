@@ -3,6 +3,10 @@ import { t } from '../i18n.js';
 import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO } from '../utils.js';
 import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing } from '../selectors.js';
 import { openAdventureModal } from '../modals/adventure.js';
+import { state, saveData } from '../data.js';
+import { render } from '../router.js';
+import { toast } from '../toast.js';
+import { hasLinkedEmail, linkEmail } from '../sync.js';
 
 export function renderOversigtTab(a) {
   const sparet    = totalSparet(a.id);
@@ -114,6 +118,22 @@ export function renderOversigtTab(a) {
     `;
   }
 
+  // Diskret, afviselig linje — kun første gang et eventyr får sat et
+  // opsparingsmål, og kun hvis kontoen stadig er anonym. En anonym
+  // Supabase-session er bundet til enheden; mister man telefonen, mister
+  // man adgangen til det, der er sparet op.
+  const emailPromptHtml = (!state.emailPromptDismissed && målBeløb > 0 && !hasLinkedEmail) ? `
+    <div class="paper">
+      <p class="paper-eyebrow">${t('emailPromptEyebrow')}</p>
+      <p style="margin:0 0 12px;font-size:14px;color:var(--ink-soft);line-height:1.5">${t('emailPromptText')}</p>
+      <div class="field" style="margin-bottom:10px">
+        <input type="email" id="email-prompt-input" placeholder="${t('emailPlaceholder')}" />
+      </div>
+      <button class="btn btn-rust btn-block" data-action="link-email">${t('emailPromptLink')}</button>
+      <button class="btn-ghost" data-action="dismiss-email-prompt" style="width:100%;margin-top:6px">${t('emailPromptDismiss')}</button>
+    </div>
+  ` : "";
+
   return `
     ${countdownHtml}
     ${opsparingHtml}
@@ -139,10 +159,29 @@ export function renderOversigtTab(a) {
         `}
       </div>
     ` : ""}
+    ${emailPromptHtml}
   `;
 }
 
 export function wireOversigt(a) {
   document.querySelector('[data-action="edit-dates"]')?.addEventListener("click", () => openAdventureModal(a));
   document.querySelector('[data-action="edit-mål"]')?.addEventListener("click", () => openAdventureModal(a));
+
+  document.querySelector('[data-action="dismiss-email-prompt"]')?.addEventListener("click", () => {
+    state.emailPromptDismissed = true;
+    saveData();
+    render();
+  });
+
+  document.querySelector('[data-action="link-email"]')?.addEventListener("click", async () => {
+    const input = document.getElementById("email-prompt-input");
+    const email = input.value.trim();
+    if (!email) { alert(t('emailRequired')); return; }
+    try {
+      await linkEmail(email);
+      toast(t('emailLinkSent'));
+    } catch {
+      alert(t('emailLinkFailed'));
+    }
+  });
 }

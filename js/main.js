@@ -1,20 +1,22 @@
 // ---------- Init ----------
-import { state, saveData } from './data.js';
+import { state, saveData, touch } from './data.js';
 import { daysBetween, todayISO } from './utils.js';
 import { t } from './i18n.js';
 import { toast } from './toast.js';
 import { render } from './router.js';
+import { SYNC_ENABLED } from './config.js';
 
 function autoArchiveOldAdventures() {
   const archived = [];
   for (const a of state.adventures) {
-    if (a.afsluttet) continue;
+    if (a.deletedAt || a.afsluttet) continue;
     // Arkivering kræver en konkret slutreference — modsat grupperingen i
     // Program-fanen, som bevidst IKKE fallbacker til startdato.
     const endRef = a.slutdato || a.startdato;
     if (!endRef) continue;               // intet at sammenligne
     if (daysBetween(endRef, todayISO()) > 3) {
       a.afsluttet = true;
+      touch(a);
       archived.push(a);
     }
   }
@@ -24,7 +26,7 @@ function autoArchiveOldAdventures() {
       actionLabel: t('undo'),
       persistent: true,
       onAction: () => {
-        archived.forEach(a => { a.afsluttet = false; });
+        archived.forEach(a => { a.afsluttet = false; touch(a); });
         saveData();
         render();
       },
@@ -35,3 +37,10 @@ function autoArchiveOldAdventures() {
 autoArchiveOldAdventures();
 window.addEventListener("hashchange", render);
 render();
+
+if (SYNC_ENABLED) {
+  // Dynamisk import — aldrig statisk i kernemodul-grafen — så en genuint
+  // offline første indlæsning uden cache for esm.sh stadig lader appen
+  // starte fuldt funktionelt på lokale data, i stilhed.
+  import('./sync.js').then(m => m.initSync()).catch(() => {});
+}

@@ -1,21 +1,21 @@
 // ---------- Selektorer ----------
-import { state, uid } from './data.js';
+import { state, uid, touch, tombstone } from './data.js';
 import { t } from './i18n.js';
 import { todayISO, addDaysISO } from './utils.js';
 
 export function getAdventure(id) {
-  return state.adventures.find(a => a.id === id);
+  return state.adventures.find(a => a.id === id && !a.deletedAt);
 }
 
 export function activitiesFor(adventureId) {
   return state.activities
-    .filter(a => a.adventureId === adventureId)
+    .filter(a => a.adventureId === adventureId && !a.deletedAt)
     .sort((a, b) => a.dato.localeCompare(b.dato));
 }
 
 export function savingsFor(adventureId) {
   return state.savings
-    .filter(s => s.adventureId === adventureId)
+    .filter(s => s.adventureId === adventureId && !s.deletedAt)
     .sort((a, b) => b.dato.localeCompare(a.dato));
 }
 
@@ -28,21 +28,24 @@ export function totalAktivitetsPris(adventureId) {
 }
 
 export function findLinkedActivity(adventureId, kilde) {
-  return state.activities.find(x => x.adventureId === adventureId && x.kilde === kilde);
+  return state.activities.find(x => x.adventureId === adventureId && x.kilde === kilde && !x.deletedAt);
 }
 
 export function syncLinkedActivity(adventureId, kilde, navn, kategori, dato, pris) {
-  const idx = state.activities.findIndex(x => x.adventureId === adventureId && x.kilde === kilde);
+  // Kun match mod en IKKE-slettet linket aktivitet — ellers ville
+  // genindtastning af en Fly/Hotel-pris efter en tidligere sletning
+  // "genoplive" den tombstonede record i stedet for at oprette en ny.
+  const idx = state.activities.findIndex(x => x.adventureId === adventureId && x.kilde === kilde && !x.deletedAt);
   if (pris > 0) {
     if (idx >= 0) {
       // Behold brugerens eget navn, hvis aktiviteten er omdøbt i Program-fanen —
       // kun kategori/dato/pris synkroniseres fra eventyr-formularens genvej.
-      state.activities[idx] = { ...state.activities[idx], kategori, dato, pris };
+      state.activities[idx] = touch({ ...state.activities[idx], kategori, dato, pris });
     } else {
-      state.activities.push({ id: uid(), adventureId, navn, kategori, dato, pris, kilde });
+      state.activities.push(touch({ id: uid(), adventureId, navn, kategori, dato, pris, kilde }));
     }
   } else if (idx >= 0) {
-    state.activities.splice(idx, 1);
+    tombstone(state.activities[idx]);
   }
 }
 
@@ -80,18 +83,18 @@ export function hasOpsparing(a) {
 
 export function upcomingAdventures() {
   return [...state.adventures]
-    .filter(isPlanned)
+    .filter(a => !a.deletedAt && isPlanned(a))
     .sort((a, b) => a.startdato.localeCompare(b.startdato));
 }
 
 export function ideaAdventures() {
   return [...state.adventures]
-    .filter(isIdea)
+    .filter(a => !a.deletedAt && isIdea(a))
     .sort((a, b) => (a.navn || "").localeCompare(b.navn || ""));
 }
 
 export function pastAdventures() {
   return [...state.adventures]
-    .filter(a => a.afsluttet)
+    .filter(a => !a.deletedAt && a.afsluttet)
     .sort((a, b) => (b.startdato || "").localeCompare(a.startdato || ""));
 }

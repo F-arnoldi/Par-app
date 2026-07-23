@@ -3,7 +3,7 @@ import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { esc, formatMonoDate, formatMonoRange, todayISO } from '../utils.js';
 import { ICON_VALG } from '../constants.js';
-import { state, saveData, uid } from '../data.js';
+import { state, saveData, uid, touch } from '../data.js';
 import { findLinkedActivity, syncLinkedActivity } from '../selectors.js';
 import { navigate, render } from '../router.js';
 import { openDatePicker } from './datepicker.js';
@@ -218,7 +218,11 @@ export function openAdventureModal(existing = null) {
         alert(t('priceInvalid')); return;
       }
 
-      const record = {
+      // Spreder ...a først, så felter som en fremtidig serverId (sat af
+      // sync-motoren, Fase 3) overlever en redigering — ikke kun de felter
+      // formularen selv kender til.
+      const record = touch({
+        ...a,
         id: a.id,
         navn,
         type: "oplevelse",
@@ -228,7 +232,7 @@ export function openAdventureModal(existing = null) {
         opsparingAktiveret,
         icon: valgtIcon,
         afsluttet: a.afsluttet || false,
-      };
+      });
 
       if (existing) {
         const idx = state.adventures.findIndex(x => x.id === a.id);
@@ -254,7 +258,8 @@ export function openAdventureModal(existing = null) {
         alert(t('amountMustBePositive')); return;
       }
 
-      const record = {
+      const record = touch({
+        ...a,
         id: a.id,
         navn,
         type: "rejse",
@@ -264,7 +269,7 @@ export function openAdventureModal(existing = null) {
         opsparingAktiveret: false,
         icon: valgtIcon,
         afsluttet: a.afsluttet || false,
-      };
+      });
 
       if (existing) {
         const idx = state.adventures.findIndex(x => x.id === a.id);

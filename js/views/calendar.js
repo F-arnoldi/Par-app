@@ -29,7 +29,7 @@ export function renderCalendar() {
   const gridStart = new Date(year, month, 1 - firstWeekday);
 
   // Only include planned events (has startdato) that overlap this grid
-  const events = state.adventures.filter(a => !!a.startdato);
+  const events = state.adventures.filter(a => !a.deletedAt && !!a.startdato);
   const gridEnd = new Date(gridStart);
   gridEnd.setDate(gridEnd.getDate() + 41);
 

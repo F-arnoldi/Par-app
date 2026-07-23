@@ -159,6 +159,15 @@ button { font-family: inherit; }
 
 .icon-only:hover { color: var(--rust); }
 
+.home-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Diskret — kun dæmpet ved offline, ingen alarmerende farve/animation */
+.sync-indicator.is-offline { color: var(--ink-soft); opacity: 0.6; }
+
 /* ---------- Hero card (Postcard) ---------- */
 .hero {
   background: var(--rust);
@@ -1102,6 +1111,14 @@ button { font-family: inherit; }
   font-size: 17px;
   color: var(--ink);
   padding: 10px 24px 6px;
+  margin: 0;
+}
+
+.sheet-hint {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-soft);
+  padding: 0 24px 8px;
   margin: 0;
 }
 

@@ -4,12 +4,16 @@ import { todayISO } from './utils.js';
 import { renderList, wireList } from './views/list.js';
 import { renderDetail, wireDetail } from './views/detail.js';
 import { renderCalendar, wireCalendar } from './views/calendar.js';
+import { handleJoin } from './views/join.js';
 
 export function parseRoute() {
   const hash = location.hash.replace(/^#\/?/, "");
   const parts = hash.split("/").filter(Boolean);
   if (parts.length === 0) return { name: "list" };
   if (parts[0] === "calendar") return { name: "calendar" };
+  if (parts[0] === "join" && parts[1] && parts[2]) {
+    return { name: "join", serverAdventureId: parts[1], token: parts[2] };
+  }
   if (parts[0] === "adventure" && parts[1]) {
     return {
       name: "detail",
@@ -39,6 +43,16 @@ export function render() {
   const route = parseRoute();
   const root = document.getElementById("app");
   let scrollToToday = false;
+
+  if (route.name === "join") {
+    // Fire-and-forget: handleJoin selv navigerer videre (eller viser en
+    // fejltilstand) når den er færdig, hvilket trigger en helt almindelig,
+    // synkron render() igen. Ingen scroll-logik er relevant for dette
+    // mellemstadie.
+    handleJoin(route.serverAdventureId, route.token);
+    lastHash = currentHash;
+    return;
+  }
 
   if (route.name === "detail") {
     // Gammelt /planer-segment redirectes til /program, så gemte links/

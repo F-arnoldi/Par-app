@@ -2,7 +2,7 @@
 import { t } from '../i18n.js';
 import { esc, isSafeHttpUrl } from '../utils.js';
 import { KATEGORIER } from '../constants.js';
-import { state, saveData, uid } from '../data.js';
+import { state, saveData, uid, touch, tombstone } from '../data.js';
 import { openModal, closeModal } from './modal.js';
 import { render } from '../router.js';
 
@@ -155,7 +155,7 @@ export function openActivityModal(adv, existing = null) {
 
   document.getElementById("act-delete")?.addEventListener("click", () => {
     if (confirm(t('confirmDeleteActivity'))) {
-      state.activities = state.activities.filter(a => a.id !== x.id);
+      tombstone(x);
       saveData();
       closeModal();
       render();
@@ -186,14 +186,14 @@ export function openActivityModal(adv, existing = null) {
       status: valgtStatus,
     } : {};
 
-    const record = existing
+    const record = touch(existing
       ? { ...existing, navn, kategori, dato, pris, ...detailOverrides }
       : {
           id: x.id, adventureId: adv.id, navn, kategori, dato, pris, kilde: null,
           startTid: "", slutTid: "", varerTil: "", stedNavn: "", adresse: "",
           reference: "", link: "", telefon: "", noter: "", status: "idé",
           ...detailOverrides,
-        };
+        });
 
     if (existing) {
       const idx = state.activities.findIndex(a => a.id === x.id);
