@@ -123,6 +123,30 @@ button { font-family: inherit; }
   .device-status { padding-top: env(safe-area-inset-top, 8px); }
 }
 
+/* Installeret som rigtig app: den tegnede telefon-ramme og falske "9:41"-
+   statuslinje er kun en visuel attrap til at forhåndsvise appen i en
+   almindelig browser-fane. Kørt installeret viser OS'et sin egen rigtige
+   statuslinje, så attrappen skal væk — ellers ville brugeren se to
+   statuslinjer oven i hinanden. */
+@media (display-mode: standalone) {
+  body { background: var(--paper); }
+  .device {
+    margin: 0;
+    max-width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .device-notch,
+  .device-status {
+    display: none;
+  }
+  #app {
+    padding-top: calc(4px + env(safe-area-inset-top, 0px));
+  }
+}
+
 #app {
   padding: 4px 22px 110px;
   min-height: calc(100vh - 64px - 44px);

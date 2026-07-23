@@ -44,3 +44,11 @@ if (SYNC_ENABLED) {
   // starte fuldt funktionelt på lokale data, i stilhed.
   import('./sync.js').then(m => m.initSync()).catch(() => {});
 }
+
+if ("serviceWorker" in navigator) {
+  // Efter første render, aldrig i vejen for den — cacher kun appens egen
+  // skal, aldrig data eller kald til esm.sh/Supabase (se sw.js).
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
