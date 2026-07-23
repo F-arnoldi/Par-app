@@ -49,13 +49,13 @@ export function renderLogin() {
   ` : `
     <p style="margin:0 0 20px;font-size:14px;color:var(--ink-soft);line-height:1.5">${t('loginGateIntro')}</p>
     <div class="field" style="margin-bottom:10px">
+      <input type="text" id="gate-name-input" placeholder="${t('yourNamePlaceholder')}" />
+    </div>
+    <div class="field" style="margin-bottom:10px">
       <input type="email" id="gate-email-input" placeholder="${t('emailPlaceholder')}" />
     </div>
     <div class="field" style="margin-bottom:10px">
       <input type="password" id="gate-password-input" autocomplete="current-password" placeholder="${t('passwordPlaceholder')}" />
-    </div>
-    <div class="field" style="margin-bottom:10px">
-      <input type="text" id="gate-name-input" placeholder="${t('yourNamePlaceholder')}" />
     </div>
     <button class="btn btn-rust btn-block" data-action="gate-signin">${t('signInBtn')}</button>
     <button class="btn btn-block" data-action="gate-signup" style="margin-top:6px">${t('signUpBtn')}</button>
