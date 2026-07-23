@@ -1477,11 +1477,25 @@ html.is-native-app #app {
   text-align: center;
 }
 
+/* Viewport der klipper .dp-grid's vandrette glid ved månedsskift.
+   display:grid + grid-column/row:1 på begge (gamle og nye) .dp-grid lader
+   dem overlappe i samme celle under overgangen, uden at skulle måle og
+   låse en pixel-højde i JS — position:absolute ville ellers kræve det. */
+.dp-grid-viewport {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+}
+
 .dp-grid {
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0;
   padding: 0 20px;
+  touch-action: none; /* ellers scroller arket, mens man trækker en rækkevidde */
+  will-change: transform;
 }
 
 .dp-cell {
@@ -1497,6 +1511,7 @@ html.is-native-app #app {
   align-items: center;
   justify-content: center;
   padding: 0;
+  transition: background-color 120ms ease-out;
 }
 
 .dp-num {
@@ -1528,6 +1543,17 @@ html.is-native-app #app {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
+}
+
+/* Kort "landing"-skalering, kun afspillet når en celle LIGE ER blevet
+   start/slut (se datepicker.js's paint()) — ikke ved hver re-maling. */
+@keyframes dpMarkerIn {
+  from { transform: translate(-50%, -50%) scale(0.85); }
+  to { transform: translate(-50%, -50%) scale(1); }
+}
+.dp-cell.dp-marker-in.dp-start::before,
+.dp-cell.dp-marker-in.dp-end::before {
+  animation: dpMarkerIn 140ms ease-out;
 }
 
 .dp-cell.dp-start .dp-num,
@@ -1562,15 +1588,30 @@ html.is-native-app #app {
 }
 
 .dp-chip-val {
+  display: inline-block;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 16px;
   color: var(--ink);
+  transition: opacity 100ms ease-out;
 }
 
 .dp-chip-val.empty { color: var(--ink-faint); }
+.dp-chip-val.dp-chip-fade { opacity: 0; }
 
 .dp-confirm-wrap { padding: 8px 24px 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dp-cell,
+  .dp-chip-val,
+  .dp-grid {
+    transition: none !important;
+  }
+  .dp-cell.dp-marker-in.dp-start::before,
+  .dp-cell.dp-marker-in.dp-end::before {
+    animation: none !important;
+  }
+}
 
 /* ---------- Calendar view ---------- */
 .cal-hero {
