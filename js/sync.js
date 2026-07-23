@@ -15,6 +15,7 @@ let pendingRerun = false;
 let debounceTimer = null;
 
 export let hasLinkedEmail = false;
+export let myEmail = null;
 export const syncStatus = { state: "idle", lastSyncedAt: null };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -368,6 +369,7 @@ async function doInitSync() {
 
   supabase.auth.onAuthStateChange((_event, session) => {
     hasLinkedEmail = !!session?.user?.email;
+    myEmail = session?.user?.email || null;
   });
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -375,6 +377,7 @@ async function doInitSync() {
     await supabase.auth.signInAnonymously();
   }
   hasLinkedEmail = !!session?.user?.email;
+  myEmail = session?.user?.email || null;
 
   onDataSaved(() => scheduleSync());
   window.addEventListener("focus", () => scheduleSync());
@@ -443,4 +446,38 @@ export async function getMemberCount(serverAdventureId) {
     .eq("adventure_id", serverAdventureId);
   if (error) return null;
   return data.length;
+}
+
+// ---------- Profil ----------
+
+// Rent netværkskald — den lokale state.myDisplayName opdateres af kalderen
+// (samme mønster som rotateInviteLink/resetInviteLink), da der ikke findes
+// noget auth-state-change-event at hænge en automatisk lokal opdatering på,
+// sådan som hasLinkedEmail/myEmail har.
+export async function saveDisplayName(name) {
+  if (!supabase) throw new Error("sync not initialized");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+  const { error } = await supabase
+    .from("profiles")
+    .upsert({ user_id: user.id, display_name: name, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+// Navnene på de ANDRE medlemmer af et eventyr (aldrig ens eget), kun dem
+// der rent faktisk har sat et navn — kalderen falder tilbage til
+// getMemberCount()'s antals-baserede tekst hvis dette array er tomt.
+export async function getMemberNames(serverAdventureId) {
+  if (!supabase) return [];
+  const { data: { user } } = await supabase.auth.getUser();
+  const myId = user?.id;
+
+  const membersRes = await supabase.from("adventure_members").select("user_id").eq("adventure_id", serverAdventureId);
+  if (membersRes.error) return [];
+  const otherIds = membersRes.data.map(m => m.user_id).filter(id => id !== myId);
+  if (otherIds.length === 0) return [];
+
+  const profilesRes = await supabase.from("profiles").select("display_name").in("user_id", otherIds);
+  if (profilesRes.error) return [];
+  return profilesRes.data.map(p => p.display_name).filter(Boolean);
 }

@@ -81,6 +81,7 @@ export function defaultData() {
     plans: {},
     lastSyncedAt: null,
     emailPromptDismissed: false,
+    myDisplayName: "",
   };
 }
 

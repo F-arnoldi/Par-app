@@ -4,7 +4,7 @@ import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { state, saveData, touch, tombstone } from '../data.js';
 import { toast } from '../toast.js';
-import { navigate, render } from '../router.js';
+import { navigate } from '../router.js';
 import { openAdventureModal } from './adventure.js';
 import { openInviteModal } from './invite.js';
 import { downloadICS } from '../ics.js';
@@ -64,11 +64,19 @@ export function openDetailMenu(a) {
   if (a.serverId) {
     // Kort, ikke-blokerende opslag — sheeten er allerede tegnet og fuldt
     // interaktiv. "Delt med"-linjen fyldes ind, når (og hvis) svaret når
-    // frem; ingen spinner, den er bare tom indtil da.
+    // frem; ingen spinner, den er bare tom indtil da. Navne foretrækkes
+    // frem for et antal, men kun for de medlemmer der rent faktisk har
+    // sat et navn i deres profil — resten falder tilbage til antallet.
     import('../sync.js').then(async (sync) => {
-      const count = await sync.getMemberCount(a.serverId);
+      const [names, count] = await Promise.all([
+        sync.getMemberNames(a.serverId),
+        sync.getMemberCount(a.serverId),
+      ]);
       const line = document.getElementById("shared-with-line");
-      if (line && count != null) {
+      if (!line) return;
+      if (names.length > 0) {
+        line.textContent = t('sharedWithNames', names);
+      } else if (count != null) {
         line.textContent = count > 1 ? t('sharedWithCount', count - 1) : t('sharedWithNoOne');
       }
     }).catch(() => {});
@@ -139,7 +147,6 @@ function syncStatusText() {
 }
 
 export function openAppMenu() {
-  const otherLangName = state.lang === "da" ? t('langNameEn') : t('langNameDa');
   openSheet(`
     <p class="sheet-title">${t('appName')}</p>
     <p class="sheet-hint">${syncStatusText()}</p>
@@ -149,8 +156,8 @@ export function openAppMenu() {
     <button class="sheet-action" data-app-action="all">
       <span class="sheet-glyph">${icon("grid")}</span> ${t('allAdventures')}
     </button>
-    <button class="sheet-action" data-app-action="lang">
-      <span class="sheet-glyph">${icon("globe")}</span> ${t('language')} · ${otherLangName}
+    <button class="sheet-action" data-app-action="profile">
+      <span class="sheet-glyph">${icon("user")}</span> ${t('profileTitle')}
     </button>
     <button class="sheet-action" data-app-action="about">
       <span class="sheet-glyph">${icon("info")}</span> ${t('about')}
@@ -161,12 +168,7 @@ export function openAppMenu() {
       const action = el.dataset.appAction;
       closeSheet();
       if (action === "calendar") return navigate("/calendar");
-      if (action === "lang") {
-        state.lang = state.lang === "da" ? "en" : "da";
-        saveData();
-        render();
-        return;
-      }
+      if (action === "profile") return navigate("/profile");
       toast(t('comingSoon'));
     });
   });
