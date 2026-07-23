@@ -117,21 +117,26 @@ export function renderOversigtTab(a) {
   return `
     ${countdownHtml}
     ${opsparingHtml}
-    ${aktPris > 0 && målBeløb > 0 ? `
+    ${aktPris > 0 ? `
       <div class="paper">
         <p class="paper-eyebrow">${t('plannedExpenses')}</p>
-        <div class="stat-row">
-          <div>
-            <p class="stat-big">${formatKr(aktPris)}</p>
-            <p class="stat-label">${t('sumOfActivities')}</p>
+        ${målBeløb > 0 ? `
+          <div class="stat-row">
+            <div>
+              <p class="stat-big">${formatKr(aktPris)}</p>
+              <p class="stat-label">${t('sumOfActivities')}</p>
+            </div>
+            <div>
+              <p class="stat-big ${aktPris > målBeløb ? 'rust' : 'sage'}">
+                ${aktPris > målBeløb ? "+" + formatKr(aktPris - målBeløb) : formatKr(målBeløb - aktPris)}
+              </p>
+              <p class="stat-label">${aktPris > målBeløb ? t('overAmount') : t('leftOfAmount')}</p>
+            </div>
           </div>
-          <div>
-            <p class="stat-big ${aktPris > målBeløb ? 'rust' : 'sage'}">
-              ${aktPris > målBeløb ? "+" + formatKr(aktPris - målBeløb) : formatKr(målBeløb - aktPris)}
-            </p>
-            <p class="stat-label">${aktPris > målBeløb ? t('overAmount') : t('leftOfAmount')}</p>
-          </div>
-        </div>
+        ` : `
+          <p class="stat-big">${formatKr(aktPris)}</p>
+          <p class="stat-label">${t('sumOfActivities')}</p>
+        `}
       </div>
     ` : ""}
   `;
