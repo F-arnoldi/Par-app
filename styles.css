@@ -1921,6 +1921,68 @@ button { font-family: inherit; }
 
 .dp-confirm-wrap { padding: 8px 24px 4px; }
 
+/* ---------- Time picker ---------- */
+.tp-columns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 220px;
+  margin: 8px 0;
+}
+
+.tp-col {
+  flex: 1;
+  max-width: 100px;
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tp-col::-webkit-scrollbar { display: none; }
+
+.tp-col-pad {
+  height: 88px;
+}
+
+.tp-option {
+  display: block;
+  width: 100%;
+  padding: 10px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--ink-faint);
+  background: none;
+  border: none;
+  scroll-snap-align: center;
+  cursor: pointer;
+}
+.tp-option.selected {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 24px;
+}
+
+.tp-colon {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  padding-bottom: 4px;
+}
+
+.tp-confirm-wrap {
+  display: flex;
+  gap: 10px;
+}
+.tp-confirm-wrap .btn-block { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-col { scroll-behavior: auto; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dp-cell,
   .dp-chip-val,

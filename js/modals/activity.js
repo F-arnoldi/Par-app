@@ -6,6 +6,7 @@ import { KATEGORIER } from '../constants.js';
 import { state, saveData, uid, touch, tombstone, restore } from '../data.js';
 import { openModal, closeModal } from './modal.js';
 import { openDatePicker } from './datepicker.js';
+import { openTimePicker } from './timepicker.js';
 import { toast } from '../toast.js';
 import { render } from '../router.js';
 
@@ -18,12 +19,16 @@ function detailsFieldsHtml(x) {
   return `
     <div class="field-row">
       <div class="field" style="margin-bottom:0">
-        <label for="act-start-tid">${t('startTimeLabel')}</label>
-        <input type="time" id="act-start-tid" value="${x.startTid || ""}" />
+        <label>${t('startTimeLabel')}</label>
+        <button type="button" class="date-select" id="act-start-tid-select" data-time="${x.startTid || ""}">
+          ${t('pickTime')}
+        </button>
       </div>
       <div class="field" style="margin-bottom:0">
-        <label for="act-slut-tid">${t('endTimeLabel')}</label>
-        <input type="time" id="act-slut-tid" value="${x.slutTid || ""}" />
+        <label>${t('endTimeLabel')}</label>
+        <button type="button" class="date-select" id="act-slut-tid-select" data-time="${x.slutTid || ""}">
+          ${t('pickTime')}
+        </button>
       </div>
     </div>
     <div class="field">
@@ -222,6 +227,30 @@ export function openActivityModal(adv, existing = null, preset = null) {
 
   wireDateSelectButton("act-date-select");
 
+  // Samme egen tidsvælger som resten af appen (se timepicker.js) — ikke
+  // browserens indbyggede <input type="time">, som åbner OS'ets eget hjul
+  // og bryder med appens udtryk.
+  function wireTimeSelectButton(id, label) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    function refresh() {
+      if (btn.dataset.time) {
+        btn.textContent = btn.dataset.time;
+        btn.classList.add("date-selected");
+      } else {
+        btn.textContent = t('pickTime');
+        btn.classList.remove("date-selected");
+      }
+    }
+    refresh();
+    btn.addEventListener("click", () => {
+      openTimePicker(btn.dataset.time, label, (value) => {
+        btn.dataset.time = value || "";
+        refresh();
+      });
+    });
+  }
+
   // Rent kosmetisk — beløbet der rent faktisk gemmes/tælles med er stadig
   // kr.-feltet uændret, se formatForeignHint. Kun relevant når eventyret
   // selv har fået sat en rejsevaluta+kurs (se adventure.js).
@@ -249,6 +278,8 @@ export function openActivityModal(adv, existing = null, preset = null) {
       area.innerHTML = detailsFieldsHtml(x);
       wireStatusPicker();
       wireDateSelectButton("act-varer-til-select");
+      wireTimeSelectButton("act-start-tid-select", t('startTimeLabel'));
+      wireTimeSelectButton("act-slut-tid-select", t('endTimeLabel'));
     }
   }
 
@@ -416,8 +447,8 @@ export function openActivityModal(adv, existing = null, preset = null) {
     if (!navn) { showFieldError(document.getElementById("act-navn"), t('nameRequired')); return; }
 
     const detailOverrides = detailsShown ? {
-      startTid: document.getElementById("act-start-tid").value,
-      slutTid: document.getElementById("act-slut-tid").value,
+      startTid: document.getElementById("act-start-tid-select").dataset.time || "",
+      slutTid: document.getElementById("act-slut-tid-select").dataset.time || "",
       varerTil: document.getElementById("act-varer-til-select").dataset.start || "",
       stedNavn: document.getElementById("act-sted").value.trim(),
       adresse: document.getElementById("act-adresse").value.trim(),
