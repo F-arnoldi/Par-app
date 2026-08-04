@@ -16,26 +16,12 @@ export function renderDetail(a, tab) {
     : "";
 
   const tabs = allowedTabsFor(a);
-  const showsProgram = tabs.some(tb => tb.id === "program");
 
   let tabContent = "";
-  if (tab === "opsparing")       tabContent = renderOpsparingTab(a);
+  if (tab === "program")         tabContent = renderProgramTab(a);
+  else if (tab === "opsparing")  tabContent = renderOpsparingTab(a);
   else if (tab === "pakkeliste") tabContent = renderPakkelisteTab(a);
-  else if (showsProgram) {
-    // Oversigt og Program vises side om side ved ≥768px (se
-    // .detail-wide-grid i styles.css) — begge tegnes altid, is-active
-    // styrer hvilken der reelt er synlig under den bredde. Kun "rejse"
-    // har en Program-fane overhovedet (allowedTabsFor); en "oplevelse"
-    // falder til den rene Oversigt nedenfor, samme som før.
-    tabContent = `
-      <div class="detail-wide-grid">
-        <div class="detail-col ${tab !== "program" ? "is-active" : ""}">${renderOversigtTab(a)}</div>
-        <div class="detail-col ${tab === "program" ? "is-active" : ""}">${renderProgramTab(a)}</div>
-      </div>
-    `;
-  } else {
-    tabContent = renderOversigtTab(a);
-  }
+  else                           tabContent = renderOversigtTab(a);
 
   return `
     <div class="detail-top">
@@ -65,15 +51,8 @@ export function wireDetail(a, tab) {
     el.addEventListener("click", () => navigate(`/adventure/${a.id}/${el.dataset.tab}`));
   });
 
-  if (tab === "opsparing") wireOpsparing(a);
+  if (tab === "program") wireProgram(a);
+  else if (tab === "opsparing") wireOpsparing(a);
   else if (tab === "pakkeliste") wirePakkelisteTab(a);
-  else if (allowedTabsFor(a).some(tb => tb.id === "program")) {
-    // Begge er i DOM'en samtidig (se renderDetail) — begge skal derfor
-    // også have deres lyttere, uanset hvilken der er is-active lige nu.
-    // Ingen af de to's forespørgselsvælgere overlapper hinandens markup.
-    wireOversigt(a);
-    wireProgram(a);
-  } else {
-    wireOversigt(a);
-  }
+  else wireOversigt(a);
 }
