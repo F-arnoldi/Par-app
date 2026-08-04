@@ -1,9 +1,12 @@
 // ---------- Oversigt-fane ----------
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
-import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO, kildeNavn, kildeIkon } from '../utils.js';
+import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO, todayISO, daysBetween, kildeNavn, kildeIkon } from '../utils.js';
 import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing, findLinkedActivity } from '../selectors.js';
 import { KILDE_INFO } from '../constants.js';
+import { state, saveData, touch } from '../data.js';
+import { toast } from '../toast.js';
+import { render } from '../router.js';
 import { openAdventureModal } from '../modals/adventure.js';
 import { openActivityModal } from '../modals/activity.js';
 
@@ -90,6 +93,31 @@ export function renderOversigtTab(a) {
       `;
     }
 
+    // Foreslår selv et beløb, i stedet for at kræve at brugeren regner det
+    // ud og opretter spareplanen manuelt, før prognosen ovenfor overhovedet
+    // kan vise sig. "hver" antager to personer — appen er bygget til par,
+    // og der findes endnu intet pålideligt tal for hvor mange der reelt er
+    // med på eventyret (adventure_members kræver et netværkskald og siger
+    // intet før partneren har accepteret en invitation).
+    let planSuggestion = "";
+    if ((!plan || !plan.planlagtBeløb) && mangler > 0 && a.startdato) {
+      const dageTil = daysBetween(todayISO(), a.startdato);
+      if (dageTil > 0) {
+        const uger = Math.max(1, Math.ceil(dageTil / 7));
+        const perUgeTotal = Math.ceil((mangler / uger) / 10) * 10;
+        const perUgeHver = Math.ceil((perUgeTotal / 2) / 10) * 10;
+        planSuggestion = `
+          <div class="callout suggest" data-suggest-per-week="${perUgeTotal}">
+            <span class="callout-icon">💡</span>
+            <div>
+              <p style="margin:0 0 10px">${t('planSuggestText', formatKr(perUgeHver), formatDate(a.startdato))}</p>
+              <button type="button" class="btn" data-action="use-suggestion">${t('useSuggestion')}</button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     opsparingHtml = `
       <div class="paper">
         <p class="paper-eyebrow">${t('opsparingLabel')}</p>
@@ -113,6 +141,7 @@ export function renderOversigtTab(a) {
           <span>${t('settingAside', formatKr(målBeløb))}</span>
         </div>
         ${prognose}
+        ${planSuggestion}
       </div>
     `;
   }
@@ -187,5 +216,18 @@ export function wireOversigt(a) {
       const act = findLinkedActivity(a.id, kilde);
       openActivityModal(a, act, act ? null : { kilde, kategori: KILDE_INFO[kilde].kategori });
     });
+  });
+
+  document.querySelector('[data-action="use-suggestion"]')?.addEventListener("click", (e) => {
+    const perUgeTotal = Number(e.currentTarget.closest("[data-suggest-per-week]")?.dataset.suggestPerWeek);
+    if (!perUgeTotal) return;
+    state.plans[a.id] = { planlagtBeløb: perUgeTotal, frekvens: "uge" };
+    // Spareplanen foldes ind i eventyr-rækken ved sync — se opsparing.js's
+    // save-plan-handler, samme touch()-behov gælder her.
+    const idx = state.adventures.findIndex(x => x.id === a.id);
+    if (idx >= 0) touch(state.adventures[idx]);
+    saveData();
+    toast(t('planSaved'));
+    render();
   });
 }

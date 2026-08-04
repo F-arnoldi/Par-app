@@ -20,6 +20,10 @@ export function renderOpsparingTab(a) {
         <label for="save-amount">${t('amount')}</label>
         <input type="number" id="save-amount" placeholder="0" inputmode="numeric" />
       </div>
+      <div class="quick-amounts">
+        ${[100, 250, 500].map(v => `<button type="button" class="quick-amount-btn" data-amt="${v}">+${v}</button>`).join("")}
+        ${plan?.planlagtBeløb ? `<button type="button" class="quick-amount-btn" data-amt="${plan.planlagtBeløb}">${formatKr(plan.planlagtBeløb)}</button>` : ""}
+      </div>
       <div class="field">
         <label for="save-date">${t('date')}</label>
         <input type="date" id="save-date" value="${todayISO()}" />
@@ -79,7 +83,27 @@ export function renderOpsparingTab(a) {
   `;
 }
 
+// 25/50/75/100% — fejrer kun den TÆRSKEL en given indbetaling faktisk
+// krydser (før% < tærskel <= efter%), aldrig på almindelig gen-rendering,
+// så festen kun sker i selve øjeblikket målet rykker sig.
+const MILESTONES = [25, 50, 75, 100];
+function crossedMilestone(mål, before, after) {
+  if (mål <= 0) return null;
+  const beforePct = (before / mål) * 100;
+  const afterPct = (after / mål) * 100;
+  const crossed = MILESTONES.filter(m => beforePct < m && afterPct >= m);
+  return crossed.length > 0 ? crossed[crossed.length - 1] : null;
+}
+
 export function wireOpsparing(a) {
+  document.querySelectorAll("[data-amt]").forEach(el => {
+    el.addEventListener("click", () => {
+      const amountEl = document.getElementById("save-amount");
+      amountEl.value = el.dataset.amt;
+      showFieldError(amountEl, null);
+    });
+  });
+
   document.querySelector('[data-action="log-saving"]')?.addEventListener("click", () => {
     const amountEl = document.getElementById("save-amount");
     const dateEl = document.getElementById("save-date");
@@ -90,9 +114,11 @@ export function wireOpsparing(a) {
     if (!amt || amt <= 0) { showFieldError(amountEl, t('amountValidation')); return; }
     showFieldError(dateEl, null);
     if (!dato) { showFieldError(dateEl, t('dateValidation')); return; }
+    const before = totalSparet(a.id);
     state.savings.push(touch({ id: uid(), adventureId: a.id, beløb: amt, dato, notat }));
     saveData();
-    toast(t('paymentLogged'));
+    const milestone = crossedMilestone(Number(a.målBeløb) || 0, before, before + amt);
+    toast(milestone ? t('milestoneToast', milestone, a.navn) : t('paymentLogged'));
     render();
   });
 

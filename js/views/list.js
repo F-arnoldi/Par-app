@@ -2,11 +2,12 @@
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { esc, formatMonoRange, formatKr, heroCountdown, shortCountdown } from '../utils.js';
-import { totalSparet, upcomingAdventures, ideaAdventures, pastAdventures } from '../selectors.js';
+import { totalSparet, totalSparetAlle, upcomingAdventures, ideaAdventures, pastAdventures, hasOpsparing } from '../selectors.js';
 import { navigate } from '../router.js';
 import { openAdventureModal } from '../modals/adventure.js';
 import { openAppMenu } from '../modals/sheet.js';
 import { syncStatus } from '../sync.js';
+import { state } from '../data.js';
 
 export function renderList() {
   const upcoming = upcomingAdventures();
@@ -31,6 +32,7 @@ export function renderList() {
 
   return `
     ${renderHomeTop()}
+    ${renderTotalSavings()}
     ${next
       ? renderHero(next)
       : `
@@ -79,6 +81,22 @@ export function renderHomeTop() {
       <div class="home-top-actions">
         <button class="icon-only sync-indicator ${syncIndicatorOffline() ? "is-offline" : ""} ${syncStatus.state === "failing" ? "is-failing" : ""}" data-action="app-menu" aria-label="${t('syncStatus')}">${icon("cloud")}</button>
         <button class="icon-only" data-action="app-menu" aria-label="${t('menu')}">${icon("menu")}</button>
+      </div>
+    </div>
+  `;
+}
+
+// Vises kun når der overhovedet er noget at samle på tværs af — ellers
+// bare en tom "0 kr." linje der ikke fortæller brugeren noget.
+function renderTotalSavings() {
+  const relevant = state.adventures.filter(a => !a.deletedAt && hasOpsparing(a));
+  if (relevant.length === 0) return "";
+  return `
+    <div class="savings-summary">
+      <div class="trip-glyph">${icon("coin")}</div>
+      <div>
+        <p class="savings-summary-label">${t('totalSavedLabel')}</p>
+        <p class="savings-summary-val">${formatKr(totalSparetAlle())}</p>
       </div>
     </div>
   `;

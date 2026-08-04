@@ -23,6 +23,12 @@ export function totalSparet(adventureId) {
   return savingsFor(adventureId).reduce((sum, s) => sum + Number(s.beløb || 0), 0);
 }
 
+export function totalSparetAlle() {
+  return state.adventures
+    .filter(a => !a.deletedAt && hasOpsparing(a))
+    .reduce((sum, a) => sum + totalSparet(a.id), 0);
+}
+
 export function totalAktivitetsPris(adventureId) {
   return activitiesFor(adventureId).reduce((sum, a) => sum + Number(a.pris || 0), 0);
 }
