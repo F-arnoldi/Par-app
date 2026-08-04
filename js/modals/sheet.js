@@ -186,6 +186,9 @@ export function openAppMenu() {
   openSheet(`
     <p class="sheet-title">${t('appName')}</p>
     <p class="sheet-hint">${syncStatusText()}</p>
+    <button class="sheet-action" data-app-action="search">
+      <span class="sheet-glyph">${icon("search")}</span> ${t('searchTitle')}
+    </button>
     <button class="sheet-action" data-app-action="calendar">
       <span class="sheet-glyph">${icon("calendar")}</span> ${t('calendar')}
     </button>
@@ -200,6 +203,7 @@ export function openAppMenu() {
     el.addEventListener("click", () => {
       const action = el.dataset.appAction;
       closeSheet();
+      if (action === "search") return navigate("/search");
       if (action === "calendar") return navigate("/calendar");
       if (action === "all") return navigate("/all");
       if (action === "profile") return navigate("/profile");

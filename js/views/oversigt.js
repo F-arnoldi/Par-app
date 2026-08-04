@@ -2,7 +2,7 @@
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO, todayISO, daysBetween, kildeNavn, kildeIkon } from '../utils.js';
-import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing, findLinkedActivity } from '../selectors.js';
+import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing, findLinkedActivity, activitiesFor } from '../selectors.js';
 import { KILDE_INFO } from '../constants.js';
 import { state, saveData, touch } from '../data.js';
 import { toast } from '../toast.js';
@@ -18,6 +18,27 @@ export function renderOversigtTab(a) {
   const pct       = målBeløb > 0 ? Math.min(100, (sparet / målBeløb) * 100) : 0;
   const aktPris   = totalAktivitetsPris(a.id);
   const plan      = planFor(a.id);
+
+  // Kun for afsluttede rejser — en kort opsummering i stedet for kun en
+  // (nu tilbageskuende) nedtælling. "antal aktiviteter" tæller som
+  // Program-fanen: uden fly/hotel/transport, som er rejse-detaljer, ikke
+  // rigtige aktiviteter (se detailRowHtml længere nede).
+  let memorySummaryHtml = "";
+  if (a.afsluttet && a.startdato) {
+    const tripDays = daysBetween(a.startdato, a.slutdato || a.startdato) + 1;
+    const activityCount = activitiesFor(a.id).filter(x => !x.kilde).length;
+    memorySummaryHtml = `
+      <div class="paper">
+        <p class="paper-eyebrow">${t('memorySummaryLabel')}</p>
+        <div class="memory-stats-grid">
+          <div><p class="stat-big">${tripDays}</p><p class="stat-label">${t('tripDaysLabel')}</p></div>
+          <div><p class="stat-big">${formatKr(sparet)}</p><p class="stat-label">${t('savedTotal')}</p></div>
+          <div><p class="stat-big">${formatKr(aktPris)}</p><p class="stat-label">${t('spentTotal')}</p></div>
+          <div><p class="stat-big">${activityCount}</p><p class="stat-label">${t('activityCountLabel')}</p></div>
+        </div>
+      </div>
+    `;
+  }
 
   // Nedtælling section
   let countdownHtml;
@@ -178,6 +199,7 @@ export function renderOversigtTab(a) {
   ` : "";
 
   return `
+    ${memorySummaryHtml}
     ${countdownHtml}
     ${opsparingHtml}
     ${tripDetailsHtml}

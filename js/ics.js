@@ -1,6 +1,7 @@
 // ---------- Kalender-eksport ----------
 import { t } from './i18n.js';
-import { formatKr, addDaysISO } from './utils.js';
+import { formatKr, addDaysISO, kildeNavn } from './utils.js';
+import { activitiesFor } from './selectors.js';
 
 export function icsEscape(s) {
   return String(s ?? "")
@@ -23,15 +24,37 @@ export function icsFoldLines(text) {
   }).join("\r\n");
 }
 
+// Én begivenhed pr. aktivitet med en dato — flydende lokal tid (intet
+// Z-suffiks/TZID), da appen ikke sporer eventyrets tidszone, kun de
+// tidspunkter brugeren selv har tastet ind. En aktivitet uden klokkeslæt
+// bliver en heldagsbegivenhed, samme mønster som selve rejsens begivenhed.
+function buildActivityVEvent(x, dtStamp) {
+  if (!x.dato) return null;
+  const navn = x.kilde ? kildeNavn(x.kilde) : x.navn;
+  const datoCompact = x.dato.replace(/-/g, "");
+  const lines = ["BEGIN:VEVENT", `UID:${x.id}@nyt-eventyr`, `DTSTAMP:${dtStamp}`];
+
+  if (x.startTid) {
+    lines.push(`DTSTART:${datoCompact}T${x.startTid.replace(":", "")}00`);
+    if (x.slutTid) lines.push(`DTEND:${datoCompact}T${x.slutTid.replace(":", "")}00`);
+  } else {
+    lines.push(`DTSTART;VALUE=DATE:${datoCompact}`);
+    lines.push(`DTEND;VALUE=DATE:${addDaysISO(x.dato, 1).replace(/-/g, "")}`);
+  }
+
+  lines.push(`SUMMARY:${icsEscape(navn)}`);
+  const location = [x.stedNavn, x.adresse].filter(Boolean).join(", ");
+  if (location) lines.push(`LOCATION:${icsEscape(location)}`);
+  if (x.noter) lines.push(`DESCRIPTION:${icsEscape(x.noter)}`);
+  lines.push("END:VEVENT");
+  return lines;
+}
+
 export function buildICS(a) {
   const dtStart = a.startdato.replace(/-/g, "");
   const dtEnd = addDaysISO(a.slutdato || a.startdato, 1).replace(/-/g, "");
   const dtStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Nyt Eventyr//DA",
-    "CALSCALE:GREGORIAN",
+  const tripEventLines = [
     "BEGIN:VEVENT",
     `UID:${a.id}@nyt-eventyr`,
     `DTSTAMP:${dtStamp}`,
@@ -40,9 +63,21 @@ export function buildICS(a) {
     `SUMMARY:${icsEscape(a.navn)}`,
   ];
   if (Number(a.målBeløb) > 0) {
-    lines.push(`DESCRIPTION:${icsEscape(t('icsAmountLine', formatKr(a.målBeløb)))}`);
+    tripEventLines.push(`DESCRIPTION:${icsEscape(t('icsAmountLine', formatKr(a.målBeløb)))}`);
   }
-  lines.push("END:VEVENT", "END:VCALENDAR");
+  tripEventLines.push("END:VEVENT");
+
+  const activityEventLines = activitiesFor(a.id).flatMap(x => buildActivityVEvent(x, dtStamp) || []);
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Nyt Eventyr//DA",
+    "CALSCALE:GREGORIAN",
+    ...tripEventLines,
+    ...activityEventLines,
+    "END:VCALENDAR",
+  ];
   return icsFoldLines(lines.join("\r\n"));
 }
 

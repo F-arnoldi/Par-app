@@ -5,6 +5,7 @@ import { renderList, wireList } from './views/list.js';
 import { renderDetail, wireDetail } from './views/detail.js';
 import { renderCalendar, wireCalendar } from './views/calendar.js';
 import { renderAllTab, wireAllTab } from './views/all.js';
+import { renderSearchView, wireSearchView } from './views/search.js';
 import { renderProfile, wireProfile } from './views/profile.js';
 import { handleJoin } from './views/join.js';
 import { renderLogin, wireLogin, isLoggedIn } from './views/login.js';
@@ -15,6 +16,7 @@ export function parseRoute() {
   if (parts.length === 0) return { name: "list" };
   if (parts[0] === "calendar") return { name: "calendar" };
   if (parts[0] === "all") return { name: "all" };
+  if (parts[0] === "search") return { name: "search" };
   if (parts[0] === "profile") return { name: "profile" };
   if (parts[0] === "join" && parts[1] && parts[2]) {
     return { name: "join", serverAdventureId: parts[1], token: parts[2] };
@@ -97,6 +99,9 @@ export function render() {
   } else if (route.name === "all") {
     root.innerHTML = renderAllTab();
     wireAllTab();
+  } else if (route.name === "search") {
+    root.innerHTML = renderSearchView();
+    wireSearchView();
   } else if (route.name === "profile") {
     root.innerHTML = renderProfile();
     wireProfile();

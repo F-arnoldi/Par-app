@@ -188,7 +188,10 @@ export function renderProgramTab(a) {
   const daySections = sortedDates.map(iso => {
     const dayActivities = byDate.get(iso);
     return `
-      <p class="section-eyebrow" data-day-heading="${iso}">${formatDayHeading(iso)}</p>
+      <div class="day-heading-row">
+        <p class="section-eyebrow" data-day-heading="${iso}">${formatDayHeading(iso)}</p>
+        <button type="button" class="day-add-btn" data-add-on-day="${iso}" aria-label="${t('addActivity')}">+</button>
+      </div>
       ${dayActivities.length > 0 ? `
         <div class="item-list">
           ${sortByTime(dayActivities).map(x => renderActivityCard(x, canVote)).join("")}
@@ -223,6 +226,9 @@ export function renderProgramTab(a) {
 export function wireProgram(a) {
   document.querySelectorAll('[data-action="add-activity"]').forEach(el => {
     el.addEventListener("click", () => openActivityModal(a));
+  });
+  document.querySelectorAll("[data-add-on-day]").forEach(el => {
+    el.addEventListener("click", () => openActivityModal(a, null, { dato: el.dataset.addOnDay }));
   });
   document.querySelectorAll("[data-open-activity]").forEach(el => {
     el.addEventListener("click", () => {

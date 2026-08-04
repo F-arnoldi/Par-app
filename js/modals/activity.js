@@ -86,9 +86,9 @@ export function openActivityModal(adv, existing = null, preset = null) {
   const x = existing || {
     id: uid(),
     adventureId: adv.id,
-    navn: preset ? kildeNavn(preset.kilde) : "",
-    kategori: preset ? preset.kategori : "oplevelse",
-    dato: "",
+    navn: preset?.kilde ? kildeNavn(preset.kilde) : "",
+    kategori: preset?.kilde ? preset.kategori : "oplevelse",
+    dato: preset?.dato || "",
     pris: "",
   };
 

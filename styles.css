@@ -297,6 +297,36 @@ button { font-family: inherit; }
   margin: 28px 0 4px;
 }
 
+.day-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.day-heading-row .section-eyebrow { margin: 28px 0 4px; }
+
+.search-hint {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 20px 4px 0;
+}
+
+.day-add-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* ---------- Trip list (compact) ---------- */
 .trip-list {
   display: flex;
@@ -681,6 +711,12 @@ button { font-family: inherit; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+.memory-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 16px;
 }
 
 .stat-big {
