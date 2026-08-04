@@ -133,20 +133,14 @@ export function openAdventureModal(existing = null) {
     } else {
       const flyAct = existing ? findLinkedActivity(a.id, "fly") : null;
       const hotelAct = existing ? findLinkedActivity(a.id, "hotel") : null;
-      fieldsRoot.innerHTML = `
-        <div class="field">
-          <label>${t('datesLabel')}</label>
-          <button type="button" class="date-select" id="date-select"
-                  data-start="${a.startdato || ""}" data-end="${a.slutdato || ""}">
-            ${t('pickDates')}
-          </button>
-        </div>
+      const transportAct = existing ? findLinkedActivity(a.id, "transport") : null;
 
-        <div class="field">
-          <label for="adv-mål">${t('amountSetAsideLabel')}</label>
-          <input type="number" id="adv-mål" value="${a.målBeløb || ""}" placeholder="${t('optional')}" inputmode="numeric" />
-        </div>
-
+      // Beløb og fly/hotel/transport-priser er kun altid synlige ved
+      // REDIGERING af et eksisterende eventyr (eventuelle tal skal aldrig
+      // gemme sig bag en lukket "tilføj detaljer") — ved OPRETTELSE lever
+      // de bag et progressivt "+ Tilføj detaljer"-trin herunder, så
+      // brugeren først mødes af type/ikon/navn/datoer.
+      const detailsFieldsHtml = `
         <div class="field-row">
           <div class="field" style="margin-bottom:0">
             <label for="adv-fly">${t('flyLabel')}</label>
@@ -157,6 +151,30 @@ export function openAdventureModal(existing = null) {
             <input type="number" id="adv-hotel" value="${hotelAct ? hotelAct.pris : ""}" placeholder="${t('optional')}" inputmode="numeric" />
           </div>
         </div>
+        <div class="field">
+          <label for="adv-transport">${t('transportLabel')}</label>
+          <input type="number" id="adv-transport" value="${transportAct ? transportAct.pris : ""}" placeholder="${t('optional')}" inputmode="numeric" />
+        </div>
+      `;
+
+      fieldsRoot.innerHTML = `
+        <div class="field">
+          <label>${t('datesLabel')}</label>
+          <button type="button" class="date-select" id="date-select"
+                  data-start="${a.startdato || ""}" data-end="${a.slutdato || ""}">
+            ${t('pickDates')}
+          </button>
+        </div>
+
+        ${existing ? `
+          <div class="field">
+            <label for="adv-mål">${t('amountSetAsideLabel')}</label>
+            <input type="number" id="adv-mål" value="${a.målBeløb || ""}" placeholder="${t('optional')}" inputmode="numeric" />
+          </div>
+          ${detailsFieldsHtml}
+        ` : `
+          <div id="trip-details-area"></div>
+        `}
       `;
 
       const dateBtn = document.getElementById("date-select");
@@ -179,15 +197,35 @@ export function openAdventureModal(existing = null) {
         });
       });
 
+      if (!existing) {
+        const area = document.getElementById("trip-details-area");
+        let detailsShown = false;
+        function renderDetailsArea() {
+          if (!detailsShown) {
+            area.innerHTML = `<button type="button" class="add-btn" id="trip-add-details">${t('addDetails')}</button>`;
+            document.getElementById("trip-add-details").addEventListener("click", () => {
+              detailsShown = true;
+              renderDetailsArea();
+            });
+          } else {
+            area.innerHTML = detailsFieldsHtml;
+          }
+        }
+        renderDetailsArea();
+      }
+
       getFieldValues = () => {
+        const målEl = document.getElementById("adv-mål");
         const flyEl = document.getElementById("adv-fly");
         const hotelEl = document.getElementById("adv-hotel");
+        const transportEl = document.getElementById("adv-transport");
         return {
           startdato: dateBtn.dataset.start || "",
           slutdato: dateBtn.dataset.end || "",
-          målBeløbInput: document.getElementById("adv-mål").value,
+          målBeløbInput: målEl ? målEl.value : "",
           flyPris: flyEl ? Number(flyEl.value) || 0 : 0,
           hotelPris: hotelEl ? Number(hotelEl.value) || 0 : 0,
+          transportPris: transportEl ? Number(transportEl.value) || 0 : 0,
         };
       };
     }
@@ -248,7 +286,7 @@ export function openAdventureModal(existing = null) {
         render();
       }
     } else {
-      const { startdato, slutdato, målBeløbInput, flyPris, hotelPris } = getFieldValues();
+      const { startdato, slutdato, målBeløbInput, flyPris, hotelPris, transportPris } = getFieldValues();
       const målBeløb = målBeløbInput ? Number(målBeløbInput) : 0;
 
       if (slutdato && startdato && slutdato < startdato) {
@@ -280,6 +318,7 @@ export function openAdventureModal(existing = null) {
       const dato = startdato || todayISO();
       syncLinkedActivity(a.id, "fly", "Fly", "transport", dato, flyPris);
       syncLinkedActivity(a.id, "hotel", "Hotel", "ophold", dato, hotelPris);
+      syncLinkedActivity(a.id, "transport", "Transport", "transport", dato, transportPris);
       saveData();
       closeModal();
       if (!existing) {
