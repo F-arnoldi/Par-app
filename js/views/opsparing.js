@@ -7,6 +7,7 @@ import { savingsFor, totalSparet, planFor } from '../selectors.js';
 import { state, saveData, uid, touch, tombstone, restore } from '../data.js';
 import { toast } from '../toast.js';
 import { render } from '../router.js';
+import { scheduleSavingsReminder, cancelSavingsReminder } from '../notifications.js';
 
 export function renderOpsparingTab(a) {
   const sp = savingsFor(a.id);
@@ -50,6 +51,10 @@ export function renderOpsparingTab(a) {
           </select>
         </div>
       </div>
+      <label class="toggle-row">
+        <input type="checkbox" id="plan-remind" ${plan?.remind ? "checked" : ""}/>
+        <span>${t('remindMeLabel')}</span>
+      </label>
       <div style="height:14px"></div>
       <button class="btn btn-block" data-action="save-plan">${t('saveSavingsPlan')}</button>
     </div>
@@ -114,10 +119,15 @@ export function wireOpsparing(a) {
     if (!amt || amt <= 0) { showFieldError(amountEl, t('amountValidation')); return; }
     showFieldError(dateEl, null);
     if (!dato) { showFieldError(dateEl, t('dateValidation')); return; }
+    const målBeløb = Number(a.målBeløb) || 0;
     const before = totalSparet(a.id);
+    const after = before + amt;
     state.savings.push(touch({ id: uid(), adventureId: a.id, beløb: amt, dato, notat }));
     saveData();
-    const milestone = crossedMilestone(Number(a.målBeløb) || 0, before, before + amt);
+    const milestone = crossedMilestone(målBeløb, before, after);
+    // Målet nået — ingen grund til at blive ved med at minde om en
+    // indbetaling der ikke længere mangler.
+    if (milestone === 100) cancelSavingsReminder(a);
     toast(milestone ? t('milestoneToast', milestone, a.navn) : t('paymentLogged'));
     render();
   });
@@ -126,15 +136,30 @@ export function wireOpsparing(a) {
     const planAmountEl = document.getElementById("plan-amount");
     const amt = Number(planAmountEl.value);
     const freq = document.getElementById("plan-freq").value;
+    const remind = document.getElementById("plan-remind").checked;
     showFieldError(planAmountEl, null);
     if (!amt || amt <= 0) { showFieldError(planAmountEl, t('amountValidation')); return; }
-    state.plans[a.id] = { planlagtBeløb: amt, frekvens: freq };
+    const plan = { planlagtBeløb: amt, frekvens: freq, remind };
+    state.plans[a.id] = plan;
     // Spareplanen foldes ind i eventyr-rækken ved sync (planlagt_beloeb/
     // frekvens-kolonner), så det er forældre-eventyret der skal touch()'es
     // — planen har intet eget dirty-signal at synkronisere på ellers.
+    // "remind" sendes bevidst ALDRIG med (se toAdventureRow) — det er en
+    // ren enheds-lokal indstilling, ikke noget der giver mening at dele.
     const idx = state.adventures.findIndex(x => x.id === a.id);
     if (idx >= 0) touch(state.adventures[idx]);
     saveData();
+    if (remind) {
+      if (window.Capacitor?.Plugins?.LocalNotifications) {
+        scheduleSavingsReminder(a, plan);
+      } else {
+        toast(t('remindersNotAvailable'));
+        render();
+        return;
+      }
+    } else {
+      cancelSavingsReminder(a);
+    }
     toast(t('planSaved'));
     render();
   });

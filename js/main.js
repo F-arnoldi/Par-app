@@ -5,6 +5,8 @@ import { t } from './i18n.js';
 import { toast } from './toast.js';
 import { render } from './router.js';
 import { SYNC_ENABLED } from './config.js';
+import { hasOpsparing } from './selectors.js';
+import { scheduleSavingsReminder } from './notifications.js';
 
 function autoArchiveOldAdventures() {
   const archived = [];
@@ -34,7 +36,21 @@ function autoArchiveOldAdventures() {
   }
 }
 
+// Genopretter (idempotent — samme id overskrives bare) enhver ønsket
+// påmindelse ved hver opstart, i stedet for kun ved selve
+// spareplan-formularens gem-tryk — så en geninstalleret app, en tidligere
+// afvist tilladelse der siden er givet, eller en frisk pull af en plan fra
+// den anden partners enhed alle sammen ender med den rigtige tilstand.
+function reconcileSavingsReminders() {
+  for (const a of state.adventures) {
+    if (a.deletedAt || a.afsluttet || !hasOpsparing(a)) continue;
+    const plan = state.plans[a.id];
+    if (plan?.remind) scheduleSavingsReminder(a, plan);
+  }
+}
+
 autoArchiveOldAdventures();
+reconcileSavingsReminders();
 window.addEventListener("hashchange", render);
 render();
 

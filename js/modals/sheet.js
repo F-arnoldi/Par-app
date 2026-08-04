@@ -10,6 +10,7 @@ import { openInviteModal } from './invite.js';
 import { downloadICS } from '../ics.js';
 import { syncStatus } from '../sync.js';
 import { attachDragToDismiss } from './dismissible.js';
+import { scheduleSavingsReminder, cancelSavingsReminder } from '../notifications.js';
 
 let currentClose = null;
 // Se modal.js's samme openId-mønster: en forsinket lukning fra en
@@ -109,6 +110,7 @@ export function openDetailMenu(a) {
         if (idx >= 0) {
           state.adventures[idx] = touch({ ...state.adventures[idx], afsluttet: true });
           saveData();
+          cancelSavingsReminder(a); // rejsen er slut, ingen grund til flere påmindelser
           toast(t('movedToMemories'));
           navigate("/");
         }
@@ -132,6 +134,7 @@ export function openDetailMenu(a) {
         linkedSavings.forEach(tombstone);
         delete state.plans[a.id];
         saveData();
+        cancelSavingsReminder(advRecord);
         navigate("/");
         toast(t('adventureDeleted', a.navn), {
           actionLabel: t('undo'),
@@ -142,6 +145,7 @@ export function openDetailMenu(a) {
             linkedSavings.forEach(restore);
             if (savedPlan) state.plans[a.id] = savedPlan;
             saveData();
+            if (savedPlan?.remind) scheduleSavingsReminder(advRecord, savedPlan);
             render();
           },
         });
