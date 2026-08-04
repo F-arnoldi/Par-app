@@ -94,6 +94,16 @@ button { font-family: inherit; }
   }
 }
 
+/* Samme visuelle sprog som telefon-bredden herover, bare mere plads at
+   ånde i — ikke en anden app, kun mindre kramp. Selve to-kolonne-
+   opdelingen af detaljevisningen (Oversigt ved siden af Program) sker i
+   .detail-wide-grid nedenfor, ikke her. */
+@media (min-width: 768px) {
+  .device {
+    max-width: 760px;
+  }
+}
+
 #app {
   min-height: 100vh;
   min-height: 100dvh;
@@ -584,6 +594,34 @@ button { font-family: inherit; }
   color: var(--ink);
   font-weight: 600;
   border-bottom-color: var(--rust);
+}
+
+/* Oversigt og Program tegnes altid begge (se detail.js) — under 768px er
+   kun den ene synlig ad gangen (styret af is-active, samme fane-adfærd
+   som før), ved ≥768px vises begge side om side. display:contents på
+   wrapperen betyder den ikke selv danner en boks ved den smalle bredde —
+   kolonnerne flyder direkte ind i den normale lodrette strøm, præcis som
+   hvis der slet ikke var en wrapper. */
+.detail-wide-grid {
+  display: contents;
+}
+.detail-col {
+  display: none;
+}
+.detail-col.is-active {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .detail-wide-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .detail-col {
+    display: block;
+  }
 }
 
 /* ---------- Paper sections ---------- */
@@ -1351,6 +1389,31 @@ button { font-family: inherit; }
   background: var(--rule);
   border-radius: 2px;
   margin: 0 auto 8px;
+}
+
+/* Ved ≥768px bliver ark/modaler centrerede dialoger i stedet for
+   bund-forankrede ark — samme paneler, samme luk-animation
+   (attachDragToDismiss rører intet af dette, kun positionering).
+   Træk-for-at-lukke virker stadig teknisk (pointer-baseret, ikke kun
+   touch), bare mindre forventeligt med mus — Escape/baggrunds-klik er
+   de primære lukke-veje her. Dækker også datepicker.js, som genbruger
+   præcis disse klassenavne (.sheet-backdrop.dp-backdrop/.sheet.dp-sheet).*/
+@media (min-width: 768px) {
+  .modal-backdrop,
+  .sheet-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+  .modal,
+  .sheet {
+    max-width: 480px;
+    border-radius: 26px;
+    max-height: 85vh;
+  }
+  .modal-handle,
+  .sheet-handle {
+    display: none;
+  }
 }
 
 .sheet-title {
