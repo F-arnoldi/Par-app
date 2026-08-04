@@ -62,6 +62,22 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Safe-area-paddingen sidder bevidst på body, IKKE på #app — #app ligger
+   inde i .device, som har overflow:hidden (for at give kortet runde
+   hjørner ved ≥520px). WebKit har historisk haft problemer med at lade
+   env(safe-area-inset-*) trænge korrekt igennem en overflow:hidden-
+   forfader ned til et efterkommer-element; body er den ene, urørte rod
+   der garanteret ikke sidder inden i nogen sådan kontekst. Under 520px,
+   hvor .device fylder hele skærmen uden egen margin, er dette visuelt
+   identisk med at padde #app direkte — kun den native iOS-shell (hvor
+   insæt'ene rent faktisk er større end 0) kan mærke forskellen.  */
+body {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 button { font-family: inherit; }
 
 .icon {
@@ -107,11 +123,13 @@ button { font-family: inherit; }
   min-height: 100dvh;
   /* 100vh på mobil Safari inkluderer arealet bag den dynamiske adresse-
      linje — dvh er den rigtige, synligt-areal-baserede enhed. vh-linjen
-     står som fallback for browsere uden dvh-understøttelse. */
-  padding-top: calc(4px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
-  padding-left: calc(clamp(16px, 5vw, 24px) + env(safe-area-inset-left, 0px));
-  padding-right: calc(clamp(16px, 5vw, 24px) + env(safe-area-inset-right, 0px));
+     står som fallback for browsere uden dvh-understøttelse. Selve
+     safe-area-insættet sidder på body (se ovenfor) — denne padding her
+     er kun appens EGEN indre luft, ovenpå det. */
+  padding-top: 4px;
+  padding-bottom: 110px;
+  padding-left: clamp(16px, 5vw, 24px);
+  padding-right: clamp(16px, 5vw, 24px);
 }
 
 /* ---------- Home top bar ---------- */
