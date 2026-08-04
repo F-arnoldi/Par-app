@@ -110,6 +110,10 @@ function toSavingsRow(s) {
     notat: s.notat || "",
     updated_at: s.updatedAt,
     deleted_at: s.deletedAt || null,
+    // user_id sendes bevidst ALDRIG med herfra — samme mønster som
+    // join_token i toAdventureRow. Kolonnen har sin egen DEFAULT
+    // auth.uid() ved insert, og skal forblive urørt ved senere redigering
+    // af en indbetaling, uanset hvilken partner der sidder med rettelsen.
   };
 }
 
@@ -169,6 +173,11 @@ function fromSavingsRow(row, localAdventureId) {
     beløb: Number(row.beloeb) || 0,
     dato: row.dato || "",
     notat: row.notat || "",
+    // Kun fra server → lokal, se toSavingsRow. undefined (ikke null) for
+    // rækker fra en database uden user_id-kolonnen endnu — SELECT * ville
+    // så slet ikke indeholde feltet, og `row.user_id` ville allerede være
+    // undefined af sig selv, men er eksplicit her for at gøre det tydeligt.
+    userId: row.user_id ?? null,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
   };
@@ -567,4 +576,29 @@ export async function getMemberNames(serverAdventureId) {
   const profilesRes = await supabase.from("profiles").select("display_name").in("user_id", otherIds);
   if (profilesRes.error) return [];
   return profilesRes.data.map(p => p.display_name).filter(Boolean);
+}
+
+// Til "hvem indbetalte"-visningen i Opsparing-fanen: egen id (til at kunne
+// vise "Dig" i stedet for eget navn) plus et navneopslag for resten af
+// eventyrets medlemmer. Fejler stille til { myId: null, names: {} } —
+// kalderen falder da tilbage til at vise "Ukendt" for alle indbetalinger,
+// fx hvis savings.user_id-kolonnen endnu ikke findes i databasen.
+export async function getPayerNames(serverAdventureId) {
+  if (!supabase) return { myId: null, names: {} };
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const myId = user?.id || null;
+
+    const membersRes = await supabase.from("adventure_members").select("user_id").eq("adventure_id", serverAdventureId);
+    if (membersRes.error) return { myId, names: {} };
+
+    const profilesRes = await supabase.from("profiles").select("user_id, display_name").in("user_id", membersRes.data.map(m => m.user_id));
+    if (profilesRes.error) return { myId, names: {} };
+
+    const names = {};
+    profilesRes.data.forEach(p => { if (p.display_name) names[p.user_id] = p.display_name; });
+    return { myId, names };
+  } catch {
+    return { myId: null, names: {} };
+  }
 }

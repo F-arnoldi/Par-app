@@ -3,16 +3,62 @@ import { t } from '../i18n.js';
 import { formatKr, formatMonoDate, todayISO, showFieldError } from '../utils.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
-import { savingsFor, totalSparet, planFor } from '../selectors.js';
+import { savingsFor, totalSparet, planFor, savingsGroupedByPayer } from '../selectors.js';
 import { state, saveData, uid, touch, tombstone, restore } from '../data.js';
 import { toast } from '../toast.js';
 import { render } from '../router.js';
 import { scheduleSavingsReminder, cancelSavingsReminder } from '../notifications.js';
 
+// Navne slås kun op når et eventyr rent faktisk er delt (a.serverId) —
+// cachet pr. server-id for sessionens levetid, så et tabskift ikke sender
+// samme netværkskald igen. Se wireOpsparing/fillPayerNames for hvordan
+// cachen bruges til at eftermontere navne i en allerede tegnet DOM, i
+// stedet for at genrendere hele fanen og risikere at nulstille et
+// halvudfyldt log-indbetaling-felt.
+const payerNamesCache = new Map();
+
+function payerLabel(userId, names, myId) {
+  if (userId === null) return t('unknownPayer');
+  if (userId === myId) return t('youLabel');
+  return names[userId] || t('partnerFallback');
+}
+
+function renderPayerSplitHtml(grouped, names, myId) {
+  if (grouped.length === 0) return "";
+  const total = grouped.reduce((sum, g) => sum + g.total, 0) || 1;
+  const colors = ["var(--rust)", "var(--sage)", "var(--ink-soft)"];
+  const rows = grouped.map((g, i) => ({ ...g, label: payerLabel(g.userId, names, myId), color: colors[i % colors.length] }));
+
+  let diffHtml = "";
+  if (rows.length === 2 && rows[0].total !== rows[1].total) {
+    const lower = rows[0].total > rows[1].total ? rows[1] : rows[0];
+    const gap = Math.abs(rows[0].total - rows[1].total);
+    diffHtml = `<p class="payer-split-diff">${t('payerDiff', esc(lower.label), formatKr(gap))}</p>`;
+  }
+
+  return `
+    <div class="payer-split">
+      <div class="payer-split-bar">
+        ${rows.map(r => `<div class="payer-split-seg" style="width:${(r.total / total) * 100}%;background:${r.color}"></div>`).join("")}
+      </div>
+      <div class="payer-split-legend">
+        ${rows.map(r => `<span class="payer-split-legend-item"><i class="payer-split-dot" style="background:${r.color}"></i>${esc(r.label)} ${formatKr(r.total)}</span>`).join("")}
+      </div>
+      ${diffHtml}
+    </div>
+  `;
+}
+
 export function renderOpsparingTab(a) {
   const sp = savingsFor(a.id);
   const total = totalSparet(a.id);
   const plan = planFor(a.id);
+  const grouped = savingsGroupedByPayer(a.id);
+  // Kun interessant for et delt (synkroniseret) eventyr — en ren lokal
+  // opsparing har ingen user_id-data at fordele på overhovedet.
+  const showSplit = !!a.serverId && grouped.length > 0;
+  const cached = a.serverId ? payerNamesCache.get(a.serverId) : null;
+  const showPayerOnRows = grouped.length > 1;
 
   return `
     <div class="paper">
@@ -64,6 +110,12 @@ export function renderOpsparingTab(a) {
       <span class="total-row-val">${formatKr(total)}</span>
     </div>
 
+    ${showSplit ? `
+      <div id="payer-split-wrap">
+        ${renderPayerSplitHtml(grouped, cached?.names || {}, cached?.myId ?? null)}
+      </div>
+    ` : ""}
+
     <div style="padding: 4px 0">
       <p class="paper-eyebrow" style="margin-top:14px">${t('history')}</p>
       ${sp.length === 0 ? `
@@ -75,7 +127,10 @@ export function renderOpsparingTab(a) {
               <div class="item-icon">${icon("coin")}</div>
               <div class="item-body">
                 <p class="item-title">${formatKr(s.beløb)}</p>
-                <p class="item-meta">${formatMonoDate(s.dato)}${s.notat ? " · " + esc(s.notat) : ""}</p>
+                <p class="item-meta">
+                  ${showPayerOnRows ? `<span class="item-payer" data-payer-id="${s.userId ?? ""}">${cached ? esc(payerLabel(s.userId, cached.names, cached.myId)) + " · " : ""}</span>` : ""}
+                  ${formatMonoDate(s.dato)}${s.notat ? " · " + esc(s.notat) : ""}
+                </p>
               </div>
               <div class="item-actions">
                 <button class="icon-btn" data-del-saving="${s.id}" title="${t('delete')}">✕</button>
@@ -100,7 +155,29 @@ function crossedMilestone(mål, before, after) {
   return crossed.length > 0 ? crossed[crossed.length - 1] : null;
 }
 
+// Kort, ikke-blokerende opslag — fanen er allerede tegnet og fuldt
+// interaktiv med "Ukendt"/uden navne. Retter kun de specifikke DOM-noder
+// (split-sektionen + hver historik-rækkes navnefelt) i stedet for at
+// kalde render(), som ellers ville nulstille et halvudfyldt
+// log-indbetaling-felt hvis brugeren nåede at skrive i det imens.
+function fillPayerNames(a, grouped) {
+  if (!a.serverId || grouped.length === 0) return;
+  if (payerNamesCache.has(a.serverId)) return;
+  import('../sync.js').then(async (sync) => {
+    const info = await sync.getPayerNames(a.serverId);
+    payerNamesCache.set(a.serverId, info);
+    const splitWrap = document.getElementById("payer-split-wrap");
+    if (splitWrap) splitWrap.innerHTML = renderPayerSplitHtml(grouped, info.names, info.myId);
+    document.querySelectorAll("[data-payer-id]").forEach(el => {
+      const userId = el.dataset.payerId || null;
+      el.textContent = payerLabel(userId, info.names, info.myId) + " · ";
+    });
+  }).catch(() => {});
+}
+
 export function wireOpsparing(a) {
+  fillPayerNames(a, savingsGroupedByPayer(a.id));
+
   document.querySelectorAll("[data-amt]").forEach(el => {
     el.addEventListener("click", () => {
       const amountEl = document.getElementById("save-amount");

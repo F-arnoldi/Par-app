@@ -23,6 +23,23 @@ export function totalSparet(adventureId) {
   return savingsFor(adventureId).reduce((sum, s) => sum + Number(s.beløb || 0), 0);
 }
 
+// Grupperer efter hvem der indbetalte (savings.userId, kun sat efter
+// server → lokal pull — se sync.js's fromSavingsRow). null samler
+// indbetalinger fra før user_id-kolonnen fandtes, eller fra en endnu
+// ikke-synkroniseret lokal opsparing. Navnet på hver gruppe slås op
+// separat og async (se opsparing.js) — denne selector kender kun til
+// beløb, ikke navne.
+export function savingsGroupedByPayer(adventureId) {
+  const groups = new Map();
+  for (const s of savingsFor(adventureId)) {
+    const key = s.userId || null;
+    groups.set(key, (groups.get(key) || 0) + Number(s.beløb || 0));
+  }
+  return [...groups.entries()]
+    .map(([userId, total]) => ({ userId, total }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export function totalSparetAlle() {
   return state.adventures
     .filter(a => !a.deletedAt && hasOpsparing(a))
