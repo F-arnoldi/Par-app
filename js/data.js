@@ -23,6 +23,9 @@ export function loadData() {
         type: "rejse",
         opsparingAktiveret: false,
         icon: ICON_VALG[0],
+        checklist: [],
+        valuta: null,
+        kurs: null,
         ...a,
       };
       if (!ICONS[merged.icon]) merged.icon = ICON_VALG[0];

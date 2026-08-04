@@ -58,6 +58,11 @@ export function openDetailMenu(a) {
         <span class="sheet-glyph">${icon("calendar")}</span> ${t('addToCalendar')}
       </button>
     ` : ""}
+    ${a.type !== "oplevelse" ? `
+      <button class="sheet-action" data-sheet-action="print">
+        <span class="sheet-glyph">${icon("printer")}</span> ${t('printShareProgram')}
+      </button>
+    ` : ""}
     <button class="sheet-action" data-sheet-action="invite">
       <span class="sheet-glyph">${icon("mail")}</span> ${t('invitePartner')}
     </button>
@@ -103,6 +108,7 @@ export function openDetailMenu(a) {
       closeSheet();
       if (action === "edit")   return openAdventureModal(a);
       if (action === "ics")    return downloadICS(a);
+      if (action === "print")  return navigate(`/print/${a.id}`);
       if (action === "invite") return openInviteModal(a);
       if (action === "reset-invite") return resetInviteLink(a);
       if (action === "done") {

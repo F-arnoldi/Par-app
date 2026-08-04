@@ -305,6 +305,14 @@ button { font-family: inherit; }
 }
 .day-heading-row .section-eyebrow { margin: 28px 0 4px; }
 
+.foreign-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+}
+.foreign-hint:empty { display: none; }
+
 .search-hint {
   color: var(--ink-soft);
   font-size: 14px;
@@ -811,6 +819,17 @@ button { font-family: inherit; }
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--rule);
+}
+
+.packing-check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--rust);
+}
+
+.item-title.packed {
+  color: var(--ink-soft);
+  text-decoration: line-through;
 }
 
 .item:last-child { border-bottom: none; }
@@ -2041,4 +2060,83 @@ button { font-family: inherit; }
 
 .toast.toast-persistent {
   animation: toastFadeIn 0.2s ease forwards;
+}
+
+/* ---------- Del/print program ---------- */
+.print-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 22px;
+}
+
+.print-sheet {
+  background: var(--cream);
+  color: #1a1a1a;
+  padding: 4px 0 40px;
+}
+
+.print-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  margin: 0 0 4px;
+}
+
+.print-dates {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: #555;
+  margin: 0 0 20px;
+}
+
+.print-day-heading {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 6px;
+  margin: 24px 0 10px;
+}
+
+.print-activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.print-activity {
+  padding: 8px 0;
+  border-bottom: 1px dashed #ddd;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.print-activity-name {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.print-activity-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #666;
+}
+
+.print-empty-day {
+  color: #777;
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  .device { max-width: none !important; margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+  #app { min-height: 0 !important; padding: 0 !important; }
+  body { background: #fff !important; }
 }

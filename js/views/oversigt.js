@@ -2,7 +2,7 @@
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO, todayISO, daysBetween, kildeNavn, kildeIkon } from '../utils.js';
-import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing, findLinkedActivity, activitiesFor } from '../selectors.js';
+import { totalSparet, totalAktivitetsPris, totalFaktiskForbrug, planFor, hasOpsparing, findLinkedActivity, activitiesFor } from '../selectors.js';
 import { KILDE_INFO } from '../constants.js';
 import { state, saveData, touch } from '../data.js';
 import { toast } from '../toast.js';
@@ -17,6 +17,8 @@ export function renderOversigtTab(a) {
   const overskud  = -mangler;
   const pct       = målBeløb > 0 ? Math.min(100, (sparet / målBeløb) * 100) : 0;
   const aktPris   = totalAktivitetsPris(a.id);
+  const faktiskTotal = totalFaktiskForbrug(a.id);
+  const hasFaktisk = activitiesFor(a.id).some(x => x.faktiskPris != null);
   const plan      = planFor(a.id);
 
   // Kun for afsluttede rejser — en kort opsummering i stedet for kun en
@@ -206,7 +208,18 @@ export function renderOversigtTab(a) {
     ${aktPris > 0 ? `
       <div class="paper">
         <p class="paper-eyebrow">${t('plannedExpenses')}</p>
-        ${målBeløb > 0 ? `
+        ${hasFaktisk ? `
+          <div class="stat-row">
+            <div>
+              <p class="stat-big">${formatKr(aktPris)}</p>
+              <p class="stat-label">${t('budgetLabel')}</p>
+            </div>
+            <div>
+              <p class="stat-big ${faktiskTotal > aktPris ? 'rust' : 'sage'}">${formatKr(faktiskTotal)}</p>
+              <p class="stat-label">${t('spentTotal')}</p>
+            </div>
+          </div>
+        ` : målBeløb > 0 ? `
           <div class="stat-row">
             <div>
               <p class="stat-big">${formatKr(aktPris)}</p>

@@ -8,6 +8,7 @@ import { openDetailMenu } from '../modals/sheet.js';
 import { renderOversigtTab, wireOversigt } from './oversigt.js';
 import { renderProgramTab, wireProgram } from './program.js';
 import { renderOpsparingTab, wireOpsparing } from './opsparing.js';
+import { renderPakkelisteTab, wirePakkelisteTab } from './pakkeliste.js';
 
 export function renderDetail(a, tab) {
   const range = a.startdato
@@ -17,9 +18,10 @@ export function renderDetail(a, tab) {
   const tabs = allowedTabsFor(a);
 
   let tabContent = "";
-  if (tab === "program")        tabContent = renderProgramTab(a);
-  else if (tab === "opsparing") tabContent = renderOpsparingTab(a);
-  else                          tabContent = renderOversigtTab(a);
+  if (tab === "program")         tabContent = renderProgramTab(a);
+  else if (tab === "opsparing")  tabContent = renderOpsparingTab(a);
+  else if (tab === "pakkeliste") tabContent = renderPakkelisteTab(a);
+  else                           tabContent = renderOversigtTab(a);
 
   return `
     <div class="detail-top">
@@ -51,5 +53,6 @@ export function wireDetail(a, tab) {
 
   if (tab === "program") wireProgram(a);
   else if (tab === "opsparing") wireOpsparing(a);
+  else if (tab === "pakkeliste") wirePakkelisteTab(a);
   else wireOversigt(a);
 }

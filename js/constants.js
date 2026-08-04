@@ -21,6 +21,13 @@ export const KILDE_INFO = {
 
 export const ICON_VALG = ["globe","beach","mountain","landmark","ferris-wheel","wine","spa","ski","boat","tent","sunrise","palette"];
 
+// Pakkeliste-skabeloner: sprog-neutrale nøgler, selve teksten kommer fra
+// i18n's packItem_*-nøgler (samme mønster som KATEGORIER's id → kat_*).
+export const PACKING_TEMPLATES = {
+  strandferie: ["pas", "rejseforsikring", "badetoej", "solcreme", "solbriller", "strandhaandklaede", "oplader", "adapter"],
+  storbyferie: ["pas", "rejseforsikring", "gaavenligeSko", "oplader", "adapter", "powerbank", "regntoej", "kamera"],
+};
+
 export const MAANEDER_MONO = {
   da: ["JAN","FEB","MAR","APR","MAJ","JUN","JUL","AUG","SEP","OKT","NOV","DEC"],
   en: ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],

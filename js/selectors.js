@@ -50,6 +50,15 @@ export function totalAktivitetsPris(adventureId) {
   return activitiesFor(adventureId).reduce((sum, a) => sum + Number(a.pris || 0), 0);
 }
 
+// Kun de aktiviteter der rent faktisk HAR en logget faktisk pris tæller
+// med — ikke alle med 0, som ville gøre "brugt" kunstigt lille tidligt i
+// en rejse, hvor de fleste poster stadig kun er et budgetteret gæt.
+export function totalFaktiskForbrug(adventureId) {
+  return activitiesFor(adventureId)
+    .filter(a => a.faktiskPris != null)
+    .reduce((sum, a) => sum + Number(a.faktiskPris || 0), 0);
+}
+
 export function findLinkedActivity(adventureId, kilde) {
   return state.activities.find(x => x.adventureId === adventureId && x.kilde === kilde && !x.deletedAt);
 }
@@ -80,6 +89,7 @@ export function allowedTabsFor(a) {
   const tabs = [{ id: "oversigt", label: t('tab_oversigt') }];
   if (a.type !== "oplevelse") tabs.push({ id: "program", label: t('tab_program') });
   if (hasOpsparing(a)) tabs.push({ id: "opsparing", label: t('tab_opsparing') });
+  tabs.push({ id: "pakkeliste", label: t('tab_pakkeliste') });
   return tabs;
 }
 

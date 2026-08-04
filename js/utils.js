@@ -60,6 +60,17 @@ export function formatKr(n) {
   return val.toLocaleString(locale()) + " kr.";
 }
 
+// Rent kosmetisk omregnings-hint — selve DKK-beløbet forbliver den ene
+// gemte sandhed alle vist totaler/mål regner videre på, kursen bruges kun
+// til at vise brugeren hvad tallet svarer til i rejsevalutaen, så de kan
+// sanity-tjekke det de taster. Ingen separat lagring, intet at holde i
+// sync mellem to beløb.
+export function formatForeignHint(dkkAmount, valuta, kurs) {
+  if (!valuta || !kurs || !dkkAmount) return "";
+  const foreign = Number(dkkAmount) / Number(kurs);
+  return `≈ ${foreign.toLocaleString(locale(), { maximumFractionDigits: 0 })} ${valuta}`;
+}
+
 export function heroCountdown(startdato) {
   const d = daysBetween(todayISO(), startdato);
   if (d === 0) return { num: "0", unit: t('unit_today') };

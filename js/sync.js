@@ -73,6 +73,9 @@ function toAdventureRow(a) {
     opsparing_aktiveret: !!a.opsparingAktiveret,
     planlagt_beloeb: plan.planlagtBeløb ?? null,
     frekvens: plan.frekvens ?? null,
+    checklist: a.checklist || [],
+    valuta: a.valuta || null,
+    kurs: a.kurs || null,
     updated_at: a.updatedAt,
     deleted_at: a.deletedAt || null,
     // created_by og join_token sendes bevidst ALDRIG med herfra — de har
@@ -89,6 +92,7 @@ function toActivityRow(x) {
     kategori: x.kategori,
     dato: x.dato || null,
     pris: Number(x.pris) || 0,
+    faktisk_pris: x.faktiskPris != null ? Number(x.faktiskPris) : null,
     kilde: x.kilde || null,
     start_tid: x.startTid || "",
     slut_tid: x.slutTid || "",
@@ -140,6 +144,9 @@ function fromAdventureRow(row) {
     icon: row.icon,
     afsluttet: !!row.afsluttet,
     opsparingAktiveret: !!row.opsparing_aktiveret,
+    checklist: row.checklist || [],
+    valuta: row.valuta || null,
+    kurs: row.kurs || null,
     // joinToken sendes ALDRIG i push-retningen (se toAdventureRow) — den
     // flyder kun én vej, server → lokal, så et lokalt cache-felt her holder
     // sig automatisk i sync med server-værdien, uden at kunne overskrive den.
@@ -158,6 +165,7 @@ function fromActivityRow(row, localAdventureId) {
     kategori: row.kategori,
     dato: row.dato || "",
     pris: Number(row.pris) || 0,
+    faktiskPris: row.faktisk_pris != null ? Number(row.faktisk_pris) : null,
     kilde: row.kilde || null,
     startTid: row.start_tid || "",
     slutTid: row.slut_tid || "",

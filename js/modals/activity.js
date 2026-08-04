@@ -1,7 +1,7 @@
 // ----- Opret / redigér aktivitet -----
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
-import { esc, isSafeHttpUrl, kildeNavn, kildeIkon, formatMonoDate, showFieldError } from '../utils.js';
+import { esc, isSafeHttpUrl, kildeNavn, kildeIkon, formatMonoDate, showFieldError, formatForeignHint } from '../utils.js';
 import { KATEGORIER } from '../constants.js';
 import { state, saveData, uid, touch, tombstone, restore } from '../data.js';
 import { openModal, closeModal } from './modal.js';
@@ -135,7 +135,14 @@ export function openActivityModal(adv, existing = null, preset = null) {
       <div class="field">
         <label for="act-pris">${t('priceLabelOptional')}</label>
         <input type="number" id="act-pris" value="${x.pris}" placeholder="0" inputmode="numeric" />
+        <p class="foreign-hint" id="act-pris-hint"></p>
       </div>
+    </div>
+
+    <div class="field">
+      <label for="act-faktisk-pris">${t('actualPriceLabel')}</label>
+      <input type="number" id="act-faktisk-pris" value="${x.faktiskPris ?? ""}" placeholder="0" inputmode="numeric" />
+      <p class="foreign-hint" id="act-faktisk-pris-hint"></p>
     </div>
 
     <div id="act-details-area"></div>
@@ -198,6 +205,21 @@ export function openActivityModal(adv, existing = null, preset = null) {
   }
 
   wireDateSelectButton("act-date-select");
+
+  // Rent kosmetisk — beløbet der rent faktisk gemmes/tælles med er stadig
+  // kr.-feltet uændret, se formatForeignHint. Kun relevant når eventyret
+  // selv har fået sat en rejsevaluta+kurs (se adventure.js).
+  if (adv.valuta && adv.kurs) {
+    function wirePriceHint(inputId, hintId) {
+      const input = document.getElementById(inputId);
+      const hint = document.getElementById(hintId);
+      const refresh = () => { hint.textContent = formatForeignHint(input.value, adv.valuta, adv.kurs); };
+      refresh();
+      input.addEventListener("input", refresh);
+    }
+    wirePriceHint("act-pris", "act-pris-hint");
+    wirePriceHint("act-faktisk-pris", "act-faktisk-pris-hint");
+  }
 
   function renderDetailsArea() {
     const area = document.getElementById("act-details-area");
@@ -304,6 +326,8 @@ export function openActivityModal(adv, existing = null, preset = null) {
     const kategori = kilde ? x.kategori : document.getElementById("act-kat").value;
     const dato = document.getElementById("act-date-select").dataset.start || "";
     const pris = Number(document.getElementById("act-pris").value) || 0;
+    const faktiskPrisRaw = document.getElementById("act-faktisk-pris").value;
+    const faktiskPris = faktiskPrisRaw ? Number(faktiskPrisRaw) : null;
 
     if (!navn) { showFieldError(document.getElementById("act-navn"), t('nameRequired')); return; }
 
@@ -324,9 +348,9 @@ export function openActivityModal(adv, existing = null, preset = null) {
     } : {};
 
     const record = touch(existing
-      ? { ...existing, navn, kategori, dato, pris, ...detailOverrides }
+      ? { ...existing, navn, kategori, dato, pris, faktiskPris, ...detailOverrides }
       : {
-          id: x.id, adventureId: adv.id, navn, kategori, dato, pris, kilde,
+          id: x.id, adventureId: adv.id, navn, kategori, dato, pris, faktiskPris, kilde,
           startTid: "", slutTid: "", varerTil: "", stedNavn: "", adresse: "",
           reference: "", link: "", telefon: "", noter: "", status: "idé",
           ...detailOverrides,

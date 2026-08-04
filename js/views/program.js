@@ -108,7 +108,7 @@ function sortByDateThenTime(list) {
   });
 }
 
-function formatDayHeading(iso) {
+export function formatDayHeading(iso) {
   const d = new Date(iso + "T00:00:00");
   const weekday = cap(d.toLocaleDateString(locale(), { weekday: "short" }));
   return `${weekday} ${formatMonoDate(iso)}`;
@@ -119,7 +119,7 @@ function formatDayHeading(iso) {
 // og frem hører til rejsen; kun noget FØR startdato er "uden for
 // rejseperioden"). Har eventyret slet ingen startdato (fx en idé),
 // findes der intet interval at være uden for overhovedet.
-function groupActivities(a, activities) {
+export function groupActivities(a, activities) {
   const noDate = activities.filter(x => !x.dato);
   const dated = activities.filter(x => !!x.dato);
 

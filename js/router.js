@@ -6,6 +6,7 @@ import { renderDetail, wireDetail } from './views/detail.js';
 import { renderCalendar, wireCalendar } from './views/calendar.js';
 import { renderAllTab, wireAllTab } from './views/all.js';
 import { renderSearchView, wireSearchView } from './views/search.js';
+import { renderPrintView, wirePrintView } from './views/print.js';
 import { renderProfile, wireProfile } from './views/profile.js';
 import { handleJoin } from './views/join.js';
 import { renderLogin, wireLogin, isLoggedIn } from './views/login.js';
@@ -17,6 +18,7 @@ export function parseRoute() {
   if (parts[0] === "calendar") return { name: "calendar" };
   if (parts[0] === "all") return { name: "all" };
   if (parts[0] === "search") return { name: "search" };
+  if (parts[0] === "print" && parts[1]) return { name: "print", id: parts[1] };
   if (parts[0] === "profile") return { name: "profile" };
   if (parts[0] === "join" && parts[1] && parts[2]) {
     return { name: "join", serverAdventureId: parts[1], token: parts[2] };
@@ -102,6 +104,11 @@ export function render() {
   } else if (route.name === "search") {
     root.innerHTML = renderSearchView();
     wireSearchView();
+  } else if (route.name === "print") {
+    const adv = getAdventure(route.id);
+    if (!adv) { navigate("/"); return; }
+    root.innerHTML = renderPrintView(adv);
+    wirePrintView(adv);
   } else if (route.name === "profile") {
     root.innerHTML = renderProfile();
     wireProfile();

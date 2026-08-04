@@ -197,6 +197,16 @@ export function openAdventureModal(existing = null) {
             <input type="number" id="adv-mål" value="${a.målBeløb || ""}" placeholder="${t('optional')}" inputmode="numeric" />
           </div>
           ${richDetailsFieldsHtml}
+          <div class="field-row">
+            <div class="field" style="margin-bottom:0">
+              <label for="adv-valuta">${t('currencyLabel')}</label>
+              <input type="text" id="adv-valuta" value="${esc(a.valuta || "")}" placeholder="${t('currencyPlaceholder')}" maxlength="6" />
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="adv-kurs">${t('exchangeRateLabel')}</label>
+              <input type="number" id="adv-kurs" value="${a.kurs || ""}" placeholder="${t('exchangeRatePlaceholder')}" step="0.01" inputmode="decimal" />
+            </div>
+          </div>
         ` : `
           <div id="trip-details-area"></div>
         `}
@@ -254,6 +264,8 @@ export function openAdventureModal(existing = null) {
         const flyEl = document.getElementById("adv-fly");
         const hotelEl = document.getElementById("adv-hotel");
         const transportEl = document.getElementById("adv-transport");
+        const valutaEl = document.getElementById("adv-valuta");
+        const kursEl = document.getElementById("adv-kurs");
         return {
           startdato: dateBtn.dataset.start || "",
           slutdato: dateBtn.dataset.end || "",
@@ -261,6 +273,8 @@ export function openAdventureModal(existing = null) {
           flyPris: flyEl ? Number(flyEl.value) || 0 : 0,
           hotelPris: hotelEl ? Number(hotelEl.value) || 0 : 0,
           transportPris: transportEl ? Number(transportEl.value) || 0 : 0,
+          valuta: valutaEl ? valutaEl.value.trim().toUpperCase() : "",
+          kurs: kursEl ? kursEl.value : "",
         };
       };
     }
@@ -325,7 +339,7 @@ export function openAdventureModal(existing = null) {
         render();
       }
     } else {
-      const { startdato, slutdato, målBeløbInput, flyPris, hotelPris, transportPris } = getFieldValues();
+      const { startdato, slutdato, målBeløbInput, flyPris, hotelPris, transportPris, valuta, kurs } = getFieldValues();
       const målBeløb = målBeløbInput ? Number(målBeløbInput) : 0;
       const dateBtn = document.getElementById("date-select");
       const målInput = document.getElementById("adv-mål");
@@ -350,6 +364,8 @@ export function openAdventureModal(existing = null) {
         opsparingAktiveret: false,
         icon: valgtIcon,
         afsluttet: a.afsluttet || false,
+        valuta: valuta || null,
+        kurs: kurs ? Number(kurs) : null,
       });
 
       if (existing) {
