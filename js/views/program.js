@@ -3,9 +3,37 @@ import { t, locale } from '../i18n.js';
 import { icon } from '../icons.js';
 import { esc, formatKr, formatMonoDate, kategoriIkon, kategoriNavn, buildMapsUrl, isSafeHttpUrl, cap, todayISO } from '../utils.js';
 import { activitiesFor, totalAktivitetsPris } from '../selectors.js';
-import { state } from '../data.js';
+import { state, saveData, touch } from '../data.js';
 import { toast } from '../toast.js';
+import { render } from '../router.js';
+import { myUserId } from '../sync.js';
 import { openActivityModal } from '../modals/activity.js';
+
+function isIdeaStatus(x) {
+  return !x.status || x.status === "idé";
+}
+
+function voteScore(x) {
+  const votes = x.votes || {};
+  return Object.values(votes).reduce((sum, v) => sum + v, 0);
+}
+
+// Kun for delte eventyr (a.serverId) — at stemme solo på egne idéer giver
+// ingen mening, og uden en synkroniseret modpart er der ingen at være
+// enige eller uenige med.
+function renderVoteHtml(x, canVote) {
+  if (!canVote || !isIdeaStatus(x)) return "";
+  const votes = x.votes || {};
+  const score = voteScore(x);
+  const mine = myUserId ? votes[myUserId] : undefined;
+  return `
+    <div class="vote-row" data-vote-row="${x.id}">
+      <button type="button" class="vote-btn ${mine === 1 ? "active" : ""}" data-vote="1" aria-label="${t('voteUpAria')}">👍</button>
+      <span class="vote-score">${score}</span>
+      <button type="button" class="vote-btn ${mine === -1 ? "active" : ""}" data-vote="-1" aria-label="${t('voteDownAria')}">👎</button>
+    </div>
+  `;
+}
 
 function statusDotClass(status) {
   if (status === "booket") return "is-booket";
@@ -13,7 +41,7 @@ function statusDotClass(status) {
   return "is-idea";
 }
 
-export function renderActivityCard(x) {
+export function renderActivityCard(x, canVote = false) {
   const timeRange = [x.startTid, x.slutTid].filter(Boolean).join("–");
   const metaParts = [];
   if (x.dato) metaParts.push(formatMonoDate(x.dato));
@@ -43,6 +71,7 @@ export function renderActivityCard(x) {
             ${validLink ? `<a class="item-chip" href="${esc(validLink)}" target="_blank" rel="noopener" data-inner-link>${t('openLink')}</a>` : ""}
           </div>
         ` : ""}
+        ${renderVoteHtml(x, canVote)}
       </div>
       <div class="item-price">${formatKr(x.pris)}</div>
     </div>
@@ -56,6 +85,17 @@ function sortByTime(list) {
     if (!y.startTid) return -1;
     return x.startTid.localeCompare(y.startTid);
   });
+}
+
+// Idéer flyder til toppen af den udaterede sektion, rangeret efter hvor
+// enige parterne er (tommel op minus tommel ned) — resten beholder deres
+// almindelige tidssortering. Kun relevant der: en idé har pr. definition
+// ingen dato, så den optræder aldrig i de daterede sektioner.
+function sortNoDate(list) {
+  const ideas = list.filter(isIdeaStatus);
+  const rest = list.filter(x => !isIdeaStatus(x));
+  ideas.sort((x, y) => voteScore(y) - voteScore(x));
+  return [...ideas, ...sortByTime(rest)];
 }
 
 function sortByDateThenTime(list) {
@@ -136,11 +176,12 @@ export function renderProgramTab(a) {
   }
 
   const { noDate, byDate, sortedDates, outOfRange } = groupActivities(a, akt);
+  const canVote = !!a.serverId;
 
   const noDateSection = noDate.length > 0 ? `
     <p class="section-eyebrow">${t('unplacedSection')}</p>
     <div class="item-list">
-      ${sortByTime(noDate).map(renderActivityCard).join("")}
+      ${sortNoDate(noDate).map(x => renderActivityCard(x, canVote)).join("")}
     </div>
   ` : "";
 
@@ -150,7 +191,7 @@ export function renderProgramTab(a) {
       <p class="section-eyebrow" data-day-heading="${iso}">${formatDayHeading(iso)}</p>
       ${dayActivities.length > 0 ? `
         <div class="item-list">
-          ${sortByTime(dayActivities).map(renderActivityCard).join("")}
+          ${sortByTime(dayActivities).map(x => renderActivityCard(x, canVote)).join("")}
         </div>
       ` : `
         <p style="color:var(--ink-soft);font-size:14px;margin:0 0 20px">${t('nothingPlannedYet')}</p>
@@ -161,7 +202,7 @@ export function renderProgramTab(a) {
   const outOfRangeSection = outOfRange.length > 0 ? `
     <p class="section-eyebrow">${t('outsideTripPeriod')}</p>
     <div class="item-list">
-      ${sortByDateThenTime(outOfRange).map(renderActivityCard).join("")}
+      ${sortByDateThenTime(outOfRange).map(x => renderActivityCard(x, canVote)).join("")}
     </div>
   ` : "";
 
@@ -194,6 +235,22 @@ export function wireProgram(a) {
   // redigér-modalen samtidig.
   document.querySelectorAll("[data-inner-link]").forEach(el => {
     el.addEventListener("click", (e) => e.stopPropagation());
+  });
+  document.querySelectorAll("[data-vote-row] [data-vote]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation(); // ikke åbne redigér-arket, kun registrere stemmen
+      if (!myUserId) return; // sync er ikke klar endnu — intet stabilt id at stemme med
+      const id = el.closest("[data-vote-row]").dataset.voteRow;
+      const idx = state.activities.findIndex(x => x.id === id);
+      if (idx < 0) return;
+      const dir = Number(el.dataset.vote);
+      const votes = { ...(state.activities[idx].votes || {}) };
+      if (votes[myUserId] === dir) delete votes[myUserId]; // tryk igen for at fortryde egen stemme
+      else votes[myUserId] = dir;
+      state.activities[idx] = touch({ ...state.activities[idx], votes });
+      saveData();
+      render();
+    });
   });
   document.querySelectorAll("[data-copy-ref]").forEach(el => {
     el.addEventListener("click", async (e) => {

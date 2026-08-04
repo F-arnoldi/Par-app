@@ -16,6 +16,10 @@ let debounceTimer = null;
 
 export let hasLinkedEmail = false;
 export let myEmail = null;
+// Holdt i hukommelsen (ikke kun hentet on-demand via getUser()), så
+// toActivityRow kan sætte updated_by synkront ved hvert push, uden endnu
+// et netværkskald pr. gemte aktivitet.
+export let myUserId = null;
 export const syncStatus = { state: "idle", lastSyncedAt: null };
 // Tælles op ved hver fejlet sync mens vi ER online (så en enkelt forbigående
 // fejl ikke straks alarmerer brugeren), og nulstilles ved første succes.
@@ -96,6 +100,11 @@ function toActivityRow(x) {
     telefon: x.telefon || "",
     noter: x.noter || "",
     status: x.status || "idé",
+    votes: x.votes || {},
+    // updated_by sendes ved HVERT push (modsat created_by, som har sin
+    // egen DEFAULT auth.uid() og aldrig sendes herfra — se
+    // toAdventureRow's join_token-kommentar for samme mønster).
+    updated_by: myUserId,
     updated_at: x.updatedAt,
     deleted_at: x.deletedAt || null,
   };
@@ -160,6 +169,11 @@ function fromActivityRow(row, localAdventureId) {
     telefon: row.telefon || "",
     noter: row.noter || "",
     status: row.status || "idé",
+    votes: row.votes || {},
+    // createdBy sendes ALDRIG op igen (se toActivityRow) — kolonnen har sin
+    // egen DEFAULT auth.uid() ved insert og skal aldrig kunne ændres bagefter.
+    createdBy: row.created_by ?? null,
+    updatedBy: row.updated_by ?? null,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at,
   };
@@ -391,6 +405,7 @@ async function doInitSync() {
   supabase.auth.onAuthStateChange((_event, session) => {
     hasLinkedEmail = !!session?.user?.email;
     myEmail = session?.user?.email || null;
+    myUserId = session?.user?.id || null;
   });
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -399,10 +414,20 @@ async function doInitSync() {
   }
   hasLinkedEmail = !!session?.user?.email;
   myEmail = session?.user?.email || null;
+  myUserId = session?.user?.id || null;
 
   onDataSaved(() => scheduleSync());
   window.addEventListener("focus", () => scheduleSync());
   window.addEventListener("online", () => scheduleSync());
+
+  // Fallback for "partnerens ændringer dukker op med det samme" uden ægte
+  // Supabase Realtime (som kræver tabellerne tilføjet til
+  // supabase_realtime-publikationen, et separat DB-skridt) — poller i
+  // stedet hvert 30. sekund, men KUN mens appen rent faktisk er synlig og
+  // online, så en baggrundsfane ikke bare banker løs for ingenting.
+  setInterval(() => {
+    if (document.visibilityState === "visible" && navigator.onLine) scheduleSync();
+  }, 30000);
 
   scheduleSync();
 }
@@ -601,4 +626,35 @@ export async function getPayerNames(serverAdventureId) {
   } catch {
     return { myId: null, names: {} };
   }
+}
+
+// ---------- Aktivitets-kommentarer ----------
+// Bevidst UDEN for det lokale-først sync-lag (intet state.comments,
+// ingen tombstones/LWW) — en "simpel kommentartråd" har ikke brug for at
+// virke offline eller for konflikthåndtering, kun for at læses/skrives når
+// der er forbindelse. Findes derfor slet ikke lokalt, kun hentet on-demand
+// når aktivitet-arket åbnes for en allerede synkroniseret aktivitet.
+export async function fetchComments(activityServerId) {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from("activity_comments")
+      .select("id, user_id, body, created_at")
+      .eq("activity_id", activityServerId)
+      .order("created_at", { ascending: true });
+    if (error) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+export async function postComment(activityServerId, body) {
+  if (!supabase) throw new Error("sync not initialized");
+  // user_id sendes ikke — samme DEFAULT auth.uid()-mønster som resten af
+  // filen, se toActivityRow/toSavingsRow.
+  const { error } = await supabase
+    .from("activity_comments")
+    .insert({ activity_id: activityServerId, body });
+  if (error) throw error;
 }

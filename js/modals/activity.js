@@ -121,6 +121,7 @@ export function openActivityModal(adv, existing = null, preset = null) {
       <h2>${kilde ? kildeNavn(kilde) : (existing ? t('editActivityTitle') : t('newActivityTitle'))}</h2>
       <button class="modal-close" data-modal-close>✕</button>
     </div>
+    ${existing && x.createdBy && adv.serverId ? `<p class="added-by-caption" id="act-added-by"></p>` : ""}
 
     ${nameFieldsHtml}
 
@@ -147,6 +148,16 @@ export function openActivityModal(adv, existing = null, preset = null) {
       <button type="button" class="btn btn-block" id="act-delete" style="margin-top:10px;color:var(--rust);border-color:var(--rust-soft)">
         ${t('deleteActivity')}
       </button>
+    ` : ""}
+    ${existing && x.serverId ? `
+      <div class="comments-section">
+        <p class="paper-eyebrow" style="margin-top:20px">${t('commentsLabel')}</p>
+        <div id="act-comments-list"><p class="comments-loading">${t('loadingComments')}</p></div>
+        <div class="comment-input-row">
+          <input type="text" id="act-comment-input" placeholder="${t('commentPlaceholder')}" />
+          <button type="button" class="icon-only" id="act-comment-send" aria-label="${t('commentsLabel')}">${icon("check")}</button>
+        </div>
+      </div>
     ` : ""}
   `);
 
@@ -204,6 +215,68 @@ export function openActivityModal(adv, existing = null, preset = null) {
   }
 
   renderDetailsArea();
+
+  // Kort, ikke-blokerende opslag — arket er allerede tegnet og fuldt
+  // interaktivt. Samme mønster som sheet.js's "delt med"-linje.
+  if (existing && x.createdBy && adv.serverId) {
+    import('../sync.js').then(async (sync) => {
+      const info = await sync.getPayerNames(adv.serverId);
+      const el = document.getElementById("act-added-by");
+      if (!el) return;
+      const label = x.createdBy === info.myId ? t('youLabel') : (info.names[x.createdBy] || t('partnerFallback'));
+      el.textContent = t('addedByLabel', label);
+    }).catch(() => {});
+  }
+
+  // Kommentarer lever bevidst UDEN for det lokale-først lag (intet
+  // state.comments) — hentes on-demand, kun for en aktivitet der allerede
+  // er synkroniseret (har et serverId at knytte kommentarer til).
+  async function loadComments() {
+    const listEl = document.getElementById("act-comments-list");
+    if (!listEl) return;
+    const sync = await import('../sync.js');
+    const [comments, info] = await Promise.all([
+      sync.fetchComments(x.serverId),
+      sync.getPayerNames(adv.serverId),
+    ]);
+    if (comments.length === 0) {
+      listEl.innerHTML = `<p class="comments-empty">${t('noCommentsYet')}</p>`;
+      return;
+    }
+    listEl.innerHTML = comments.map(c => {
+      const label = c.user_id === info.myId ? t('youLabel') : (info.names[c.user_id] || t('partnerFallback'));
+      return `
+        <div class="comment-row">
+          <p class="comment-meta">${esc(label)} · ${formatMonoDate(c.created_at.slice(0, 10))}</p>
+          <p class="comment-body">${esc(c.body)}</p>
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (existing && x.serverId) {
+    loadComments().catch(() => {});
+    const sendComment = async () => {
+      const input = document.getElementById("act-comment-input");
+      const body = input.value.trim();
+      if (!body) return;
+      input.disabled = true;
+      try {
+        const sync = await import('../sync.js');
+        await sync.postComment(x.serverId, body);
+        input.value = "";
+        await loadComments();
+      } catch {
+        toast(t('commentPostFailed'));
+      } finally {
+        input.disabled = false;
+      }
+    };
+    document.getElementById("act-comment-send").addEventListener("click", sendComment);
+    document.getElementById("act-comment-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendComment();
+    });
+  }
 
   document.getElementById("act-delete")?.addEventListener("click", () => {
     // Sletter med det samme og tilbyder fortryd via en toast, i stedet for

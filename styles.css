@@ -911,6 +911,37 @@ button { font-family: inherit; }
   margin-top: 8px;
 }
 
+.vote-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.vote-btn {
+  border: 1px solid var(--glass-border);
+  background: var(--paper-deep);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+}
+.vote-btn.active { opacity: 1; background: var(--rust-soft); }
+
+.vote-score {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  min-width: 14px;
+  text-align: center;
+}
+
 .item-chip {
   display: inline-flex;
   align-items: center;
@@ -1151,6 +1182,56 @@ button { font-family: inherit; }
   color: var(--ink);
 }
 
+.added-by-caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin: -10px 0 16px;
+}
+.added-by-caption:empty { display: none; }
+
+.comments-section {
+  margin-top: 4px;
+}
+
+.comment-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.comment-row:last-child { border-bottom: none; }
+
+.comment-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 0 0 3px;
+  text-transform: uppercase;
+}
+
+.comment-body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.comments-empty, .comments-loading {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.comment-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.comment-input-row input {
+  flex: 1;
+}
+
 .modal-close {
   background: none;
   border: none;
@@ -1307,7 +1388,8 @@ button { font-family: inherit; }
 
 .field input,
 .field select,
-.field textarea {
+.field textarea,
+.comment-input-row input {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid var(--rule);
@@ -1320,7 +1402,8 @@ button { font-family: inherit; }
 
 .field input:focus,
 .field select:focus,
-.field textarea:focus {
+.field textarea:focus,
+.comment-input-row input:focus {
   outline: none;
   border-color: var(--rust);
   background: rgba(255, 255, 255, 0.85);
