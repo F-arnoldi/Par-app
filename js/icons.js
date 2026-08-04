@@ -36,6 +36,7 @@ export const ICONS = {
   more: '<circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
   printer: '<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 14h12v7H6z"/>',
+  paperclip: '<path d="M8 12l6.5-6.5a3.5 3.5 0 015 5L9 20a5 5 0 01-7-7l9-9"/>',
 };
 
 export function icon(name, cls = "") {

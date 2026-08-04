@@ -666,3 +666,60 @@ export async function postComment(activityServerId, body) {
     .insert({ activity_id: activityServerId, body });
   if (error) throw error;
 }
+
+// ---------- Dokument-vedhæftninger ----------
+// Ligesom kommentarer: bevidst UDEN for det lokale-først sync-lag (ingen
+// state.documents, intet at fusionere offline) — filer lever udelukkende
+// i Supabase Storage-bucketen "documents" (se supabase-storage.sql), hentet
+// on-demand. Sti-konventionen "<adventure_id>/<activity_id>/<uuid>-<navn>"
+// er det RLS-policies på storage.objects tjekker imod (kun første led,
+// adventure_id, mod adventure_members — adgang er pr. eventyr).
+function documentFolder(adventureServerId, activityServerId) {
+  return `${adventureServerId}/${activityServerId}`;
+}
+
+// Fejler stille til [] — dækker både en helt frisk aktivitet uden filer
+// ENDNU og en bucket der ikke findes endnu (før supabase-storage.sql er
+// kørt), præcis samme nedgraderings-mønster som fetchComments.
+export async function listDocuments(adventureServerId, activityServerId) {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase.storage
+      .from("documents")
+      .list(documentFolder(adventureServerId, activityServerId), {
+        sortBy: { column: "created_at", order: "desc" },
+      });
+    if (error) return [];
+    // Supabase lister nogle gange en usynlig .emptyFolderPlaceholder for
+    // en mappe uden rigtige filer — ikke noget brugeren skal se eller
+    // kunne "slette".
+    return (data || []).filter(f => f.name !== ".emptyFolderPlaceholder");
+  } catch {
+    return [];
+  }
+}
+
+export async function uploadDocument(adventureServerId, activityServerId, file) {
+  if (!supabase) throw new Error("sync not initialized");
+  const path = `${documentFolder(adventureServerId, activityServerId)}/${crypto.randomUUID()}-${file.name}`;
+  const { error } = await supabase.storage.from("documents").upload(path, file);
+  if (error) throw error;
+}
+
+export async function deleteDocument(adventureServerId, activityServerId, fileName) {
+  if (!supabase) throw new Error("sync not initialized");
+  const path = `${documentFolder(adventureServerId, activityServerId)}/${fileName}`;
+  const { error } = await supabase.storage.from("documents").remove([path]);
+  if (error) throw error;
+}
+
+// Bucketen er PRIVAT (public: false i supabase-storage.sql) — en almindelig
+// offentlig URL virker derfor ikke, filen skal åbnes via en midlertidig
+// signeret URL. 1 time er rigeligt til at nå at se/downloade den ene fil.
+export async function getDocumentSignedUrl(adventureServerId, activityServerId, fileName) {
+  if (!supabase) return null;
+  const path = `${documentFolder(adventureServerId, activityServerId)}/${fileName}`;
+  const { data, error } = await supabase.storage.from("documents").createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}

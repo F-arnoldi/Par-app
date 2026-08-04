@@ -158,6 +158,16 @@ export function openActivityModal(adv, existing = null, preset = null) {
         ${t('deleteActivity')}
       </button>
     ` : ""}
+    ${existing && x.serverId && adv.serverId ? `
+      <div class="documents-section">
+        <p class="paper-eyebrow" style="margin-top:20px">${t('documentsLabel')}</p>
+        <div id="act-documents-list"><p class="comments-loading">${t('loadingDocuments')}</p></div>
+        <label class="btn btn-block document-upload-label">
+          ${icon("paperclip")} ${t('uploadDocumentBtn')}
+          <input type="file" id="act-doc-upload-input" accept="image/*,application/pdf" style="display:none" />
+        </label>
+      </div>
+    ` : ""}
     ${existing && x.serverId ? `
       <div class="comments-section">
         <p class="paper-eyebrow" style="margin-top:20px">${t('commentsLabel')}</p>
@@ -280,6 +290,70 @@ export function openActivityModal(adv, existing = null, preset = null) {
         </div>
       `;
     }).join("");
+  }
+
+  // Dokumenter lever, ligesom kommentarer, uden for det lokale-først lag —
+  // filerne findes kun i Supabase Storage, hentet on-demand. Fejler
+  // gracefuldt til en tom liste hvis bucketen (endnu) ikke findes, se
+  // sync.js's listDocuments.
+  async function loadDocuments() {
+    const listEl = document.getElementById("act-documents-list");
+    if (!listEl) return;
+    const sync = await import('../sync.js');
+    const files = await sync.listDocuments(adv.serverId, x.serverId);
+    if (files.length === 0) {
+      listEl.innerHTML = `<p class="comments-empty">${t('noDocumentsYet')}</p>`;
+      return;
+    }
+    listEl.innerHTML = files.map(f => {
+      // Uploadede filnavne har et "<uuid>-"-præfiks (se sync.js's
+      // uploadDocument) — vist navn er filen brugeren selv gav den.
+      const displayName = f.name.replace(/^[0-9a-f-]{36}-/, "");
+      return `
+        <div class="document-row" data-doc-name="${esc(f.name)}">
+          <span class="document-icon">${icon("paperclip")}</span>
+          <span class="document-name">${esc(displayName)}</span>
+          <button type="button" class="icon-btn" data-doc-view="${esc(f.name)}" aria-label="${t('viewDocument')}">${icon("search")}</button>
+          <button type="button" class="icon-btn" data-doc-delete="${esc(f.name)}" aria-label="${t('delete')}">✕</button>
+        </div>
+      `;
+    }).join("");
+
+    listEl.querySelectorAll("[data-doc-view]").forEach(el => {
+      el.addEventListener("click", async () => {
+        const sync = await import('../sync.js');
+        const url = await sync.getDocumentSignedUrl(adv.serverId, x.serverId, el.dataset.docView);
+        if (url) window.open(url, "_blank", "noopener");
+        else toast(t('documentOpenFailed'));
+      });
+    });
+    listEl.querySelectorAll("[data-doc-delete]").forEach(el => {
+      el.addEventListener("click", async () => {
+        try {
+          const sync = await import('../sync.js');
+          await sync.deleteDocument(adv.serverId, x.serverId, el.dataset.docDelete);
+          await loadDocuments();
+        } catch {
+          toast(t('documentDeleteFailed'));
+        }
+      });
+    });
+  }
+
+  if (existing && x.serverId && adv.serverId) {
+    loadDocuments().catch(() => {});
+    document.getElementById("act-doc-upload-input").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      e.target.value = ""; // samme fil kan vælges/uploades igen senere
+      if (!file) return;
+      try {
+        const sync = await import('../sync.js');
+        await sync.uploadDocument(adv.serverId, x.serverId, file);
+        await loadDocuments();
+      } catch {
+        toast(t('documentUploadFailed'));
+      }
+    });
   }
 
   if (existing && x.serverId) {

@@ -1342,6 +1342,44 @@ button { font-family: inherit; }
   flex: 1;
 }
 
+.documents-section {
+  margin-top: 4px;
+}
+
+.document-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.document-row:last-child { border-bottom: none; }
+
+.document-icon {
+  color: var(--ink-soft);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.document-icon .icon { width: 16px; height: 16px; }
+
+.document-name {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .modal-close {
   background: none;
   border: none;
