@@ -4,6 +4,7 @@ import { state, saveData } from '../data.js';
 import { navigate, render } from '../router.js';
 import { toast } from '../toast.js';
 import { hasLinkedEmail, myEmail, signOut } from '../sync.js';
+import { confirmAction } from '../modals/confirm.js';
 
 export function renderProfile() {
   const otherLangName = state.lang === "da" ? t('langNameEn') : t('langNameDa');
@@ -64,13 +65,13 @@ export function wireProfile() {
   });
 
   document.querySelector('[data-action="logout"]')?.addEventListener("click", async () => {
-    if (!confirm(t('logoutConfirm'))) return;
+    if (!(await confirmAction(t('logoutConfirm'), t('logoutBtn')))) return;
     try {
       await signOut();
       toast(t('signedOut'));
       render(); // isLoggedIn() er nu falsk — render() viser login-gaten med det samme
     } catch {
-      alert(t('signOutFailed'));
+      toast(t('signOutFailed'));
     }
   });
 

@@ -11,7 +11,11 @@ let currentClose = null;
 // hører til den nyeste åbning, før den rører DOM'en.
 let openId = 0;
 
-export function openModal(html) {
+// onClosed (valgfri) fyrer for ALLE lukke-veje — træk, baggrund, luk-knap
+// eller et programmatisk closeModal()-kald — ikke kun én bestemt knap.
+// Bruges af confirm.js til at afgøre et Promise til false, uanset hvordan
+// brugeren forlader arket, ikke kun ved et eksplicit "Annuller"-klik.
+export function openModal(html, onClosed) {
   const myId = ++openId;
   const root = document.getElementById("modal-root");
   root.innerHTML = `
@@ -28,6 +32,7 @@ export function openModal(html) {
     if (myId !== openId) return;
     root.innerHTML = "";
     currentClose = null;
+    onClosed?.();
   });
 
   backdrop.addEventListener("click", e => {

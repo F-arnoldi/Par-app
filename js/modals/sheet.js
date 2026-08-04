@@ -2,9 +2,9 @@
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
-import { state, saveData, touch, tombstone } from '../data.js';
+import { state, saveData, touch, tombstone, restore } from '../data.js';
 import { toast } from '../toast.js';
-import { navigate } from '../router.js';
+import { navigate, render } from '../router.js';
 import { openAdventureModal } from './adventure.js';
 import { openInviteModal } from './invite.js';
 import { downloadICS } from '../ics.js';
@@ -69,9 +69,6 @@ export function openDetailMenu(a) {
     <button class="sheet-action" data-sheet-action="done">
       <span class="sheet-glyph">${icon("check")}</span> ${t('markDone')}
     </button>
-    <button class="sheet-action" data-sheet-action="memory">
-      <span class="sheet-glyph">${icon("bookmark")}</span> ${t('saveToMemories')}
-    </button>
     <div class="sheet-sep"></div>
     <button class="sheet-action danger" data-sheet-action="delete">
       <span class="sheet-glyph">${icon("trash")}</span> ${t('deleteAdventure')}
@@ -117,23 +114,37 @@ export function openDetailMenu(a) {
         }
         return;
       }
-      if (action === "memory") {
-        toast(t('savedToMemoriesToast'));
-        return;
-      }
       if (action === "delete") {
-        if (confirm(t('confirmDeleteAdventure', a.navn))) {
-          // Eksplicit cascade-tombstone af børnene, ikke kun forældren —
-          // adgang styres af adventure_members, ikke af deleted_at, og
-          // 30-dages-oprydningen renser kun rækker efter deres EGEN alder.
-          const idx = state.adventures.findIndex(x => x.id === a.id);
-          if (idx >= 0) tombstone(state.adventures[idx]);
-          state.activities.filter(x => x.adventureId === a.id && !x.deletedAt).forEach(tombstone);
-          state.savings.filter(x => x.adventureId === a.id && !x.deletedAt).forEach(tombstone);
-          delete state.plans[a.id];
-          saveData();
-          navigate("/");
-        }
+        // Sletter med det samme og tilbyder fortryd via en toast, i stedet
+        // for at spørge først med en systemdialog — samme mønster som
+        // auto-arkiveringen i main.js. Eksplicit cascade-tombstone af
+        // børnene, ikke kun forældren — adgang styres af adventure_members,
+        // ikke af deleted_at, og 30-dages-oprydningen renser kun rækker
+        // efter deres EGEN alder.
+        const idx = state.adventures.findIndex(x => x.id === a.id);
+        if (idx < 0) return;
+        const advRecord = state.adventures[idx];
+        const savedPlan = state.plans[a.id];
+        tombstone(advRecord);
+        const linkedActivities = state.activities.filter(x => x.adventureId === a.id && !x.deletedAt);
+        linkedActivities.forEach(tombstone);
+        const linkedSavings = state.savings.filter(x => x.adventureId === a.id && !x.deletedAt);
+        linkedSavings.forEach(tombstone);
+        delete state.plans[a.id];
+        saveData();
+        navigate("/");
+        toast(t('adventureDeleted', a.navn), {
+          actionLabel: t('undo'),
+          persistent: true,
+          onAction: () => {
+            restore(advRecord);
+            linkedActivities.forEach(restore);
+            linkedSavings.forEach(restore);
+            if (savedPlan) state.plans[a.id] = savedPlan;
+            saveData();
+            render();
+          },
+        });
       }
     });
   });
@@ -153,8 +164,12 @@ async function resetInviteLink(a) {
 }
 
 function syncStatusText() {
-  // Behandler "error" roligt som offline — ingen alarmerende fejlbesked,
-  // offline er en normal tilstand appen er bygget til at leve fint med.
+  // "failing" (gentagne fejl MENS vi er online) er noget andet end
+  // offline — offline er en normal, stille tilstand appen er bygget til
+  // at leve fint med, men gentagne fejl trods forbindelse er værd at
+  // gøre opmærksom på. En enkelt forbigående fejl ("error") behandles
+  // stadig roligt som offline, ingen alarm for det.
+  if (syncStatus.state === "failing") return t('syncFailingStatus');
   if (!navigator.onLine || syncStatus.state === "error" || syncStatus.state === "offline") {
     return t('offlineStatus');
   }
@@ -176,17 +191,14 @@ export function openAppMenu() {
     <button class="sheet-action" data-app-action="profile">
       <span class="sheet-glyph">${icon("user")}</span> ${t('profileTitle')}
     </button>
-    <button class="sheet-action" data-app-action="about">
-      <span class="sheet-glyph">${icon("info")}</span> ${t('about')}
-    </button>
   `);
   document.querySelectorAll("[data-app-action]").forEach(el => {
     el.addEventListener("click", () => {
       const action = el.dataset.appAction;
       closeSheet();
       if (action === "calendar") return navigate("/calendar");
+      if (action === "all") return navigate("/all");
       if (action === "profile") return navigate("/profile");
-      toast(t('comingSoon'));
     });
   });
 }

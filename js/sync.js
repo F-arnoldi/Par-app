@@ -17,6 +17,9 @@ let debounceTimer = null;
 export let hasLinkedEmail = false;
 export let myEmail = null;
 export const syncStatus = { state: "idle", lastSyncedAt: null };
+// Tælles op ved hver fejlet sync mens vi ER online (så en enkelt forbigående
+// fejl ikke straks alarmerer brugeren), og nulstilles ved første succes.
+let consecutiveFailures = 0;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isValidUUID(id) { return UUID_RE.test(id); }
@@ -326,12 +329,21 @@ export async function runSync() {
       state.lastSyncedAt = maxSeen;
     }
     saveData();
+    consecutiveFailures = 0;
     syncStatus.state = "idle";
     syncStatus.lastSyncedAt = state.lastSyncedAt;
   } catch {
     // Offline er en normal tilstand, ikke en fejl der skal afbryde noget —
-    // recorden(erne) forbliver beskidte og prøves igen ved næste sync.
-    syncStatus.state = navigator.onLine ? "error" : "offline";
+    // recorden(erne) forbliver beskidte og prøves igen ved næste sync. Men
+    // fejler den GENTAGNE gange mens vi rent faktisk er online, er det
+    // ikke længere "offline" — det er en reel synkroniseringsfejl, og det
+    // skal se anderledes ud for brugeren end den stille offline-tilstand.
+    if (!navigator.onLine) {
+      syncStatus.state = "offline";
+    } else {
+      consecutiveFailures++;
+      syncStatus.state = consecutiveFailures >= 3 ? "failing" : "error";
+    }
   } finally {
     syncInFlight = false;
     if (pendingRerun) {

@@ -139,7 +139,13 @@ export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm,
       paint();
     });
     rootEl.querySelector('[data-picker="confirm"]').addEventListener("click", () => {
-      if (!start) { alert(t('pickStartDate')); return; }
+      if (!start) {
+        startChipEl.classList.remove("dp-chip-invalid");
+        void startChipEl.offsetWidth; // force reflow, så animationen kan afspilles igen
+        startChipEl.classList.add("dp-chip-invalid");
+        startChipEl.addEventListener("animationend", () => startChipEl.classList.remove("dp-chip-invalid"), { once: true });
+        return;
+      }
       onConfirm(start, singleMode ? "" : (end || ""));
       close();
     });

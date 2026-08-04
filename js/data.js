@@ -123,6 +123,14 @@ export function tombstone(record) {
   return touch(record);
 }
 
+// Fortryd en sletning — bruges af fortryd-toasten der viser sig lige
+// efter en sletning (samme mønster som auto-arkiveringens undo), i
+// stedet for at spørge FØR sletningen med en systemdialog.
+export function restore(record) {
+  record.deletedAt = null;
+  return touch(record);
+}
+
 // Kaldes ved log ud og ved login til en anden konto — rejsedata hører til
 // KONTOEN, ikke enheden, så et identitetsskifte skal starte enheden helt
 // forfra frem for at blande to konti sammen. Sprogvalg (lang) er en

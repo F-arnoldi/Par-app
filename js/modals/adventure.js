@@ -1,7 +1,7 @@
 // ----- Opret / redigér eventyr -----
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
-import { esc, formatMonoDate, formatMonoRange, formatKr, todayISO, kildeNavn, kildeIkon } from '../utils.js';
+import { esc, formatMonoDate, formatMonoRange, formatKr, todayISO, kildeNavn, kildeIkon, showFieldError } from '../utils.js';
 import { ICON_VALG, KILDE_INFO } from '../constants.js';
 import { state, saveData, uid, touch } from '../data.js';
 import { findLinkedActivity, syncLinkedActivity } from '../selectors.js';
@@ -280,15 +280,19 @@ export function openAdventureModal(existing = null) {
   }
 
   document.getElementById("adv-save").addEventListener("click", () => {
-    const navn = document.getElementById("adv-navn").value.trim();
-    if (!navn) { alert(t('nameRequired')); return; }
+    const navnInput = document.getElementById("adv-navn");
+    const navn = navnInput.value.trim();
+    if (!navn) { showFieldError(navnInput, t('nameRequired')); return; }
+    showFieldError(navnInput, null);
 
     if (type === "oplevelse") {
       const { startdato, prisInput, opsparingAktiveret } = getFieldValues();
       const pris = prisInput ? Number(prisInput) : 0;
+      const prisInputEl = document.getElementById("adv-pris");
 
+      showFieldError(prisInputEl, null);
       if (prisInput && (isNaN(pris) || pris < 0)) {
-        alert(t('priceInvalid')); return;
+        showFieldError(prisInputEl, t('priceInvalid')); return;
       }
 
       // Spreder ...a først, så felter som en fremtidig serverId (sat af
@@ -323,12 +327,16 @@ export function openAdventureModal(existing = null) {
     } else {
       const { startdato, slutdato, målBeløbInput, flyPris, hotelPris, transportPris } = getFieldValues();
       const målBeløb = målBeløbInput ? Number(målBeløbInput) : 0;
+      const dateBtn = document.getElementById("date-select");
+      const målInput = document.getElementById("adv-mål");
 
+      showFieldError(dateBtn, null);
       if (slutdato && startdato && slutdato < startdato) {
-        alert(t('endBeforeStart')); return;
+        showFieldError(dateBtn, t('endBeforeStart')); return;
       }
+      showFieldError(målInput, null);
       if (målBeløbInput && (isNaN(målBeløb) || målBeløb < 0)) {
-        alert(t('amountMustBePositive')); return;
+        showFieldError(målInput, t('amountMustBePositive')); return;
       }
 
       const record = touch({

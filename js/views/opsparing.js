@@ -1,10 +1,10 @@
 // ---------- Opsparing-fane ----------
 import { t } from '../i18n.js';
-import { formatKr, formatMonoDate, todayISO } from '../utils.js';
+import { formatKr, formatMonoDate, todayISO, showFieldError } from '../utils.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { savingsFor, totalSparet, planFor } from '../selectors.js';
-import { state, saveData, uid, touch, tombstone } from '../data.js';
+import { state, saveData, uid, touch, tombstone, restore } from '../data.js';
 import { toast } from '../toast.js';
 import { render } from '../router.js';
 
@@ -81,11 +81,15 @@ export function renderOpsparingTab(a) {
 
 export function wireOpsparing(a) {
   document.querySelector('[data-action="log-saving"]')?.addEventListener("click", () => {
-    const amt = Number(document.getElementById("save-amount").value);
-    const dato = document.getElementById("save-date").value;
+    const amountEl = document.getElementById("save-amount");
+    const dateEl = document.getElementById("save-date");
+    const amt = Number(amountEl.value);
+    const dato = dateEl.value;
     const notat = document.getElementById("save-note").value.trim();
-    if (!amt || amt <= 0) { alert(t('amountValidation')); return; }
-    if (!dato) { alert(t('dateValidation')); return; }
+    showFieldError(amountEl, null);
+    if (!amt || amt <= 0) { showFieldError(amountEl, t('amountValidation')); return; }
+    showFieldError(dateEl, null);
+    if (!dato) { showFieldError(dateEl, t('dateValidation')); return; }
     state.savings.push(touch({ id: uid(), adventureId: a.id, beløb: amt, dato, notat }));
     saveData();
     toast(t('paymentLogged'));
@@ -93,9 +97,11 @@ export function wireOpsparing(a) {
   });
 
   document.querySelector('[data-action="save-plan"]')?.addEventListener("click", () => {
-    const amt = Number(document.getElementById("plan-amount").value);
+    const planAmountEl = document.getElementById("plan-amount");
+    const amt = Number(planAmountEl.value);
     const freq = document.getElementById("plan-freq").value;
-    if (!amt || amt <= 0) { alert(t('amountValidation')); return; }
+    showFieldError(planAmountEl, null);
+    if (!amt || amt <= 0) { showFieldError(planAmountEl, t('amountValidation')); return; }
     state.plans[a.id] = { planlagtBeløb: amt, frekvens: freq };
     // Spareplanen foldes ind i eventyr-rækken ved sync (planlagt_beloeb/
     // frekvens-kolonner), så det er forældre-eventyret der skal touch()'es
@@ -109,12 +115,22 @@ export function wireOpsparing(a) {
 
   document.querySelectorAll("[data-del-saving]").forEach(el => {
     el.addEventListener("click", () => {
-      if (confirm(t('confirmDeletePayment'))) {
-        const s = state.savings.find(x => x.id === el.dataset.delSaving);
-        if (s) tombstone(s);
-        saveData();
-        render();
-      }
+      // Sletter med det samme og tilbyder fortryd via en toast, i stedet
+      // for at spørge først med en systemdialog.
+      const s = state.savings.find(x => x.id === el.dataset.delSaving);
+      if (!s) return;
+      tombstone(s);
+      saveData();
+      render();
+      toast(t('paymentDeleted'), {
+        actionLabel: t('undo'),
+        persistent: true,
+        onAction: () => {
+          restore(s);
+          saveData();
+          render();
+        },
+      });
     });
   });
 }

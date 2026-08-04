@@ -1,10 +1,12 @@
 // ----- Opret / redigér aktivitet -----
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
-import { esc, isSafeHttpUrl, kildeNavn, kildeIkon } from '../utils.js';
+import { esc, isSafeHttpUrl, kildeNavn, kildeIkon, formatMonoDate, showFieldError } from '../utils.js';
 import { KATEGORIER } from '../constants.js';
-import { state, saveData, uid, touch, tombstone } from '../data.js';
+import { state, saveData, uid, touch, tombstone, restore } from '../data.js';
 import { openModal, closeModal } from './modal.js';
+import { openDatePicker } from './datepicker.js';
+import { toast } from '../toast.js';
 import { render } from '../router.js';
 
 function hasAnyDetail(x) {
@@ -25,8 +27,10 @@ function detailsFieldsHtml(x) {
       </div>
     </div>
     <div class="field">
-      <label for="act-varer-til">${t('lastsUntilLabel')}</label>
-      <input type="date" id="act-varer-til" value="${x.varerTil || ""}" />
+      <label>${t('lastsUntilLabel')}</label>
+      <button type="button" class="date-select" id="act-varer-til-select" data-start="${x.varerTil || ""}">
+        ${t('pickDate')}
+      </button>
     </div>
     <div class="field">
       <label for="act-sted">${t('placeNameLabel')}</label>
@@ -122,8 +126,10 @@ export function openActivityModal(adv, existing = null, preset = null) {
 
     <div class="field-row">
       <div class="field">
-        <label for="act-dato">${t('date')}</label>
-        <input type="date" id="act-dato" value="${x.dato || ""}" />
+        <label>${t('date')}</label>
+        <button type="button" class="date-select" id="act-date-select" data-start="${x.dato || ""}">
+          ${t('pickDate')}
+        </button>
       </div>
       <div class="field">
         <label for="act-pris">${t('priceLabelOptional')}</label>
@@ -154,6 +160,34 @@ export function openActivityModal(adv, existing = null, preset = null) {
     });
   }
 
+  // Samme egen datepicker som resten af appen (eventyr-arket, både her og
+  // detaljernes "varer til") — ikke browserens indbyggede <input
+  // type="date">, som ser og virker anderledes fra ét felt til det næste.
+  function wireDateSelectButton(id) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    function refresh() {
+      if (btn.dataset.start) {
+        const y = new Date(btn.dataset.start + "T00:00:00").getFullYear();
+        btn.textContent = `${formatMonoDate(btn.dataset.start)} ${y}`;
+        btn.classList.add("date-selected");
+      } else {
+        btn.textContent = t('pickDate');
+        btn.classList.remove("date-selected");
+      }
+    }
+    refresh();
+    btn.addEventListener("click", () => {
+      const navn = kilde ? kildeNavn(kilde) : (document.getElementById("act-navn")?.value.trim() || t('adventureFallback'));
+      openDatePicker(btn.dataset.start, "", navn, (start) => {
+        btn.dataset.start = start || "";
+        refresh();
+      }, { singleOnly: true });
+    });
+  }
+
+  wireDateSelectButton("act-date-select");
+
   function renderDetailsArea() {
     const area = document.getElementById("act-details-area");
     if (!detailsShown) {
@@ -165,18 +199,28 @@ export function openActivityModal(adv, existing = null, preset = null) {
     } else {
       area.innerHTML = detailsFieldsHtml(x);
       wireStatusPicker();
+      wireDateSelectButton("act-varer-til-select");
     }
   }
 
   renderDetailsArea();
 
   document.getElementById("act-delete")?.addEventListener("click", () => {
-    if (confirm(t('confirmDeleteActivity'))) {
-      tombstone(x);
-      saveData();
-      closeModal();
-      render();
-    }
+    // Sletter med det samme og tilbyder fortryd via en toast, i stedet for
+    // at spørge først med en systemdialog.
+    tombstone(x);
+    saveData();
+    closeModal();
+    render();
+    toast(t('activityDeleted', x.navn), {
+      actionLabel: t('undo'),
+      persistent: true,
+      onAction: () => {
+        restore(x);
+        saveData();
+        render();
+      },
+    });
   });
 
   document.getElementById("act-save").addEventListener("click", () => {
@@ -185,15 +229,15 @@ export function openActivityModal(adv, existing = null, preset = null) {
     // nameFieldsHtml ovenfor.
     const navn = kilde ? kildeNavn(kilde) : document.getElementById("act-navn").value.trim();
     const kategori = kilde ? x.kategori : document.getElementById("act-kat").value;
-    const dato = document.getElementById("act-dato").value;
+    const dato = document.getElementById("act-date-select").dataset.start || "";
     const pris = Number(document.getElementById("act-pris").value) || 0;
 
-    if (!navn) { alert(t('nameRequired')); return; }
+    if (!navn) { showFieldError(document.getElementById("act-navn"), t('nameRequired')); return; }
 
     const detailOverrides = detailsShown ? {
       startTid: document.getElementById("act-start-tid").value,
       slutTid: document.getElementById("act-slut-tid").value,
-      varerTil: document.getElementById("act-varer-til").value,
+      varerTil: document.getElementById("act-varer-til-select").dataset.start || "",
       stedNavn: document.getElementById("act-sted").value.trim(),
       adresse: document.getElementById("act-adresse").value.trim(),
       reference: document.getElementById("act-reference").value.trim(),

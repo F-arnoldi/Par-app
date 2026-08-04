@@ -133,6 +133,7 @@ button { font-family: inherit; }
 
 /* Diskret — kun dæmpet ved offline, ingen alarmerende farve/animation */
 .sync-indicator.is-offline { color: var(--ink-soft); opacity: 0.6; }
+.sync-indicator.is-failing { color: var(--rust); }
 
 /* ---------- Hero card (Postcard) ---------- */
 .hero {
@@ -1584,6 +1585,17 @@ button { font-family: inherit; }
 
 .dp-chip-val.empty { color: var(--ink-faint); }
 .dp-chip-val.dp-chip-fade { opacity: 0; }
+
+@keyframes dpChipShake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+.dp-chip-val.dp-chip-invalid {
+  color: var(--rust);
+  animation: dpChipShake 0.4s;
+}
 
 .dp-confirm-wrap { padding: 8px 24px 4px; }
 

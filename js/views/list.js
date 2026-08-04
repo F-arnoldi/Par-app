@@ -77,7 +77,7 @@ export function renderHomeTop() {
     <div class="home-top">
       <span class="brand">${t('appName')}</span>
       <div class="home-top-actions">
-        <button class="icon-only sync-indicator ${syncIndicatorOffline() ? "is-offline" : ""}" data-action="app-menu" aria-label="${t('syncStatus')}">${icon("cloud")}</button>
+        <button class="icon-only sync-indicator ${syncIndicatorOffline() ? "is-offline" : ""} ${syncStatus.state === "failing" ? "is-failing" : ""}" data-action="app-menu" aria-label="${t('syncStatus')}">${icon("cloud")}</button>
         <button class="icon-only" data-action="app-menu" aria-label="${t('menu')}">${icon("menu")}</button>
       </div>
     </div>
@@ -161,6 +161,7 @@ function ensureOfflineListener() {
   const update = () => {
     document.querySelectorAll(".sync-indicator").forEach(el => {
       el.classList.toggle("is-offline", syncIndicatorOffline());
+      el.classList.toggle("is-failing", syncStatus.state === "failing");
     });
   };
   window.addEventListener("online", update);

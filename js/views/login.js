@@ -17,6 +17,7 @@ import {
   signInWithPassword, signUpWithPassword,
   requestPasswordReset, confirmPasswordReset,
 } from '../sync.js';
+import { confirmAction } from '../modals/confirm.js';
 
 export function isLoggedIn() {
   return !!state.hasLoggedInBefore;
@@ -47,8 +48,8 @@ function syncFieldsFromDom() {
   }
 }
 
-function confirmReplaceIfNeeded() {
-  return state.adventures.length === 0 || confirm(t('loginReplaceConfirm'));
+async function confirmReplaceIfNeeded() {
+  return state.adventures.length === 0 || (await confirmAction(t('loginReplaceConfirm')));
 }
 
 function fieldHtml(key, { type = "text", placeholder, autocomplete }) {
@@ -71,7 +72,7 @@ function hairline() {
 }
 
 function primaryButton(action, label) {
-  return `<button class="btn btn-rust btn-block" data-action="${action}"${submitting ? " disabled style=\"opacity:0.7\"" : ""}>${label}</button>`;
+  return `<button type="submit" class="btn btn-rust btn-block" data-action="${action}"${submitting ? " disabled style=\"opacity:0.7\"" : ""}>${label}</button>`;
 }
 
 function renderLoginMode() {
@@ -146,7 +147,7 @@ export function renderLogin() {
     <div class="hero-empty">
       <p class="eyebrow" style="color:var(--ink-soft)">${t('appName')}</p>
       <h2>${t(TITLES[mode])}</h2>
-      ${BODIES[mode]()}
+      <form data-gate-form>${BODIES[mode]()}</form>
     </div>
   `;
 }
@@ -158,104 +159,121 @@ function goTo(nextMode) {
   render();
 }
 
+async function submitSignin() {
+  syncFieldsFromDom();
+  errors = {};
+  if (!fields.email.trim()) errors.email = t('emailRequired');
+  if (!fields.password) errors.password = t('passwordRequired');
+  if (Object.keys(errors).length > 0) { render(); return; }
+  if (!(await confirmReplaceIfNeeded())) return;
+
+  const email = fields.email.trim();
+  submitting = true;
+  render();
+  try {
+    await signInWithPassword(email, fields.password);
+    toast(t('signedIn', email));
+    render();
+  } catch (err) {
+    console.error("signInWithPassword failed:", err);
+    submitting = false;
+    errors = { form: err?.message || t('authFailedGeneric') };
+    render();
+  }
+}
+
+async function submitSignup() {
+  syncFieldsFromDom();
+  errors = {};
+  if (!fields.name.trim()) errors.name = t('nameRequired');
+  if (!fields.email.trim()) errors.email = t('emailRequired');
+  if (!fields.password) errors.password = t('passwordRequired');
+  else if (fields.password.length < 8) errors.password = t('passwordTooShort');
+  if (Object.keys(errors).length > 0) { render(); return; }
+  if (!(await confirmReplaceIfNeeded())) return;
+
+  const email = fields.email.trim();
+  const name = fields.name.trim();
+  submitting = true;
+  render();
+  try {
+    await signUpWithPassword(email, fields.password, name);
+    toast(t('signedIn', email));
+    render();
+  } catch (err) {
+    console.error("signUpWithPassword failed:", err);
+    submitting = false;
+    errors = { form: err?.message || t('authFailedGeneric') };
+    render();
+  }
+}
+
+async function submitResetSend() {
+  syncFieldsFromDom();
+  errors = {};
+  if (!fields.email.trim()) errors.email = t('emailRequired');
+  if (Object.keys(errors).length > 0) { render(); return; }
+
+  const email = fields.email.trim();
+  submitting = true;
+  render();
+  try {
+    await requestPasswordReset(email);
+    submitting = false;
+    mode = "reset-code";
+    render();
+  } catch (err) {
+    console.error("requestPasswordReset failed:", err);
+    submitting = false;
+    errors = { form: err?.message || t('authFailedGeneric') };
+    render();
+  }
+}
+
+async function submitResetConfirm() {
+  syncFieldsFromDom();
+  errors = {};
+  if (!fields.code.trim()) errors.code = t('resetCodeRequired');
+  if (!fields.newPassword) errors.newPassword = t('newPasswordRequired');
+  else if (fields.newPassword.length < 8) errors.newPassword = t('passwordTooShort');
+  if (Object.keys(errors).length > 0) { render(); return; }
+  if (!(await confirmReplaceIfNeeded())) return;
+
+  const email = fields.email;
+  submitting = true;
+  render();
+  try {
+    await confirmPasswordReset(email, fields.code.trim(), fields.newPassword);
+    toast(t('signedIn', email));
+    render();
+  } catch (err) {
+    console.error("confirmPasswordReset failed:", err);
+    submitting = false;
+    errors = { form: err?.message || t('authFailedGeneric') };
+    render();
+  }
+}
+
+// Én submit-handler pr. tilstand — dækker BÅDE klik på den primære knap
+// (uændret type="submit", dens standard inde i en <form>) OG Enter-tasten
+// i et hvilket som helst tekstfelt, siden begge udløser formularens
+// native submit-hændelse. Ingen dobbelt-fyring: knappen har bevidst
+// INGEN egen click-lytter længere.
+const SUBMIT_HANDLERS = {
+  login: submitSignin,
+  signup: submitSignup,
+  "reset-request": submitResetSend,
+  "reset-code": submitResetConfirm,
+};
+
 export function wireLogin() {
   document.querySelector('[data-action="switch-signup"]')?.addEventListener("click", () => goTo("signup"));
   document.querySelector('[data-action="switch-login"]')?.addEventListener("click", () => goTo("login"));
   document.querySelector('[data-action="gate-forgot"]')?.addEventListener("click", () => goTo("reset-request"));
   document.querySelector('[data-action="reset-cancel"]')?.addEventListener("click", () => goTo("login"));
 
-  document.querySelector('[data-action="gate-signin"]')?.addEventListener("click", async () => {
-    syncFieldsFromDom();
-    errors = {};
-    if (!fields.email.trim()) errors.email = t('emailRequired');
-    if (!fields.password) errors.password = t('passwordRequired');
-    if (Object.keys(errors).length > 0) { render(); return; }
-    if (!confirmReplaceIfNeeded()) return;
-
-    const email = fields.email.trim();
-    submitting = true;
-    render();
-    try {
-      await signInWithPassword(email, fields.password);
-      toast(t('signedIn', email));
-      render();
-    } catch (err) {
-      console.error("signInWithPassword failed:", err);
-      submitting = false;
-      errors = { form: err?.message || t('authFailedGeneric') };
-      render();
-    }
-  });
-
-  document.querySelector('[data-action="gate-signup"]')?.addEventListener("click", async () => {
-    syncFieldsFromDom();
-    errors = {};
-    if (!fields.name.trim()) errors.name = t('nameRequired');
-    if (!fields.email.trim()) errors.email = t('emailRequired');
-    if (!fields.password) errors.password = t('passwordRequired');
-    else if (fields.password.length < 8) errors.password = t('passwordTooShort');
-    if (Object.keys(errors).length > 0) { render(); return; }
-    if (!confirmReplaceIfNeeded()) return;
-
-    const email = fields.email.trim();
-    const name = fields.name.trim();
-    submitting = true;
-    render();
-    try {
-      await signUpWithPassword(email, fields.password, name);
-      toast(t('signedIn', email));
-      render();
-    } catch (err) {
-      console.error("signUpWithPassword failed:", err);
-      submitting = false;
-      errors = { form: err?.message || t('authFailedGeneric') };
-      render();
-    }
-  });
-
-  document.querySelector('[data-action="reset-send"]')?.addEventListener("click", async () => {
-    syncFieldsFromDom();
-    errors = {};
-    if (!fields.email.trim()) errors.email = t('emailRequired');
-    if (Object.keys(errors).length > 0) { render(); return; }
-
-    const email = fields.email.trim();
-    submitting = true;
-    render();
-    try {
-      await requestPasswordReset(email);
-      submitting = false;
-      mode = "reset-code";
-      render();
-    } catch (err) {
-      console.error("requestPasswordReset failed:", err);
-      submitting = false;
-      errors = { form: err?.message || t('authFailedGeneric') };
-      render();
-    }
-  });
-
-  document.querySelector('[data-action="reset-confirm"]')?.addEventListener("click", async () => {
-    syncFieldsFromDom();
-    errors = {};
-    if (!fields.code.trim()) errors.code = t('resetCodeRequired');
-    if (!fields.newPassword) errors.newPassword = t('newPasswordRequired');
-    else if (fields.newPassword.length < 8) errors.newPassword = t('passwordTooShort');
-    if (Object.keys(errors).length > 0) { render(); return; }
-    if (!confirmReplaceIfNeeded()) return;
-
-    const email = fields.email;
-    submitting = true;
-    render();
-    try {
-      await confirmPasswordReset(email, fields.code.trim(), fields.newPassword);
-      toast(t('signedIn', email));
-      render();
-    } catch (err) {
-      console.error("confirmPasswordReset failed:", err);
-      submitting = false;
-      errors = { form: err?.message || t('authFailedGeneric') };
-      render();
-    }
+  document.querySelector("[data-gate-form]")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    SUBMIT_HANDLERS[mode]?.();
   });
 }

@@ -50,6 +50,10 @@ export function openInviteModal(a) {
     <button class="btn btn-rust btn-block" id="copy-link">
       ${icon("link")} ${t('copyLink')}
     </button>
+    <div class="field" id="copy-link-fallback" style="display:none;margin-top:12px">
+      <label>${t('copyLinkManually')}</label>
+      <input type="text" id="copy-link-fallback-input" readonly value="${esc(link)}" />
+    </div>
     <p class="invite-hint" style="text-align:center;margin-top:12px">
       ${t('inviteFootnote')}
     </p>
@@ -60,7 +64,13 @@ export function openInviteModal(a) {
       await navigator.clipboard.writeText(link);
       toast(t('linkCopied'));
     } catch {
-      prompt(t('copyLinkManually'), link);
+      // Ingen native prompt() — feltet vises inline, så brugeren selv kan
+      // markere og kopiere linket.
+      const field = document.getElementById("copy-link-fallback");
+      const input = document.getElementById("copy-link-fallback-input");
+      field.style.display = "";
+      input.focus();
+      input.select();
     }
   });
 }

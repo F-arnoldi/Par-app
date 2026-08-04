@@ -109,6 +109,25 @@ export function kildeNavn(kilde) {
   return t('kilde_' + kilde);
 }
 
+// Eneste DOM-rørende funktion i denne ellers rene fil — bevidst her frem
+// for i et eget lille modul, da den bruges ens fra flere formular-
+// modaler (adventure.js, activity.js, opsparing.js, datepicker.js) som
+// erstatning for alert() ved validering. Viser en lille rød linje lige
+// under feltet og sætter fokus dertil, i stedet for en systemdialog.
+// Fjerner en evt. tidligere fejlbesked for SAMME felt først, så gentagne
+// fejlslagne forsøg ikke hober flere linjer op.
+export function showFieldError(el, message) {
+  const existing = el.parentElement.querySelector(".field-error");
+  existing?.remove();
+  if (!message) return;
+  const p = document.createElement("p");
+  p.className = "field-error";
+  p.style.cssText = "margin:4px 0 0;font-size:12px;color:var(--rust)";
+  p.textContent = message;
+  el.insertAdjacentElement("afterend", p);
+  el.focus();
+}
+
 export function buildMapsUrl(adresse) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(adresse)}`;
 }

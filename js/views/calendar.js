@@ -5,7 +5,7 @@ import { WEEKDAYS } from '../constants.js';
 import { state } from '../data.js';
 import { toISO, todayISO, cap } from '../utils.js';
 import { navigate, render } from '../router.js';
-import { openAppMenu } from '../modals/sheet.js';
+import { openAppMenu, openSheet, closeSheet } from '../modals/sheet.js';
 import { renderTripRow } from './list.js';
 
 let calCursor = null;
@@ -50,27 +50,34 @@ export function renderCalendar() {
       const start = a.startdato;
       const end = a.slutdato || a.startdato;
       return iso >= start && iso <= end;
-    }).slice(0, 3); // op til 3 markører pr. celle
-
-    let dotsHtml = "";
-    let advId = null;
-
-    matches.forEach((a, i) => {
-      if (advId === null) advId = a.id; // klik navigerer til den første match
-      const start = a.startdato;
-      const end = a.slutdato || a.startdato;
-      if (i === 0 && start !== end) {
-        // Første match med en rigtig datointerval -> bånd-styling på selve cellen
-        if (iso === start) cellCls += " cal-band-start";
-        else if (iso === end) cellCls += " cal-band-end";
-        else cellCls += " cal-band-mid";
-      } else {
-        dotsHtml += '<span class="cal-dot"></span>';
-      }
     });
 
+    // Signaturforklaringen lover "bånd = rejse, prik = oplevelse" — bånd
+    // kan kun tegnes for én rejse ad gangen (det er cellens egen baggrund/
+    // cirkel-markør), så den FØRSTE RIGTIGE REJSE blandt matches vælges,
+    // uanset hvor i listen den ligger. Alt andet (oplevelser og evt.
+    // øvrige rejser i samme celle) bliver prikker i stedet — op til 3.
+    const bandEvent = matches.find(a => a.type === "rejse");
+    const dotEvents = matches.filter(a => a !== bandEvent).slice(0, 3);
+
+    if (bandEvent) {
+      const start = bandEvent.startdato;
+      const end = bandEvent.slutdato || bandEvent.startdato;
+      // Begge klasser samtidig ved en étdags-rejse (start === end === iso)
+      // giver bevidst en "solo"-cirkel uden bånd-fyldet, samme mønster som
+      // datepicker.js's dp-start.dp-end.
+      if (iso === start) cellCls += " cal-band-start";
+      if (iso === end) cellCls += " cal-band-end";
+      if (iso !== start && iso !== end) cellCls += " cal-band-mid";
+    }
+    const dotsHtml = dotEvents.map(() => '<span class="cal-dot"></span>').join("");
+
+    // Alle matches (ikke kun bånd-eventyret) skal kunne nås ved klik — se
+    // wireCalendar, som viser et lille valg-sheet, når der er mere end én.
+    const cellAdvIds = matches.map(a => a.id);
+
     cells.push(`
-      <div class="${cellCls}" ${advId ? `data-adv-id="${advId}"` : ""}>
+      <div class="${cellCls}" ${cellAdvIds.length > 0 ? `data-adv-ids="${cellAdvIds.join(",")}"` : ""}>
         <span class="cal-num">${d.getDate()}</span>
         ${dotsHtml ? `<div class="cal-dots-row">${dotsHtml}</div>` : ""}
       </div>
@@ -119,6 +126,25 @@ export function renderCalendar() {
   `;
 }
 
+// En celle kan dække flere eventyr samtidig (fx en rejse der overlapper en
+// oplevelse, eller to rejser i træk) — et klik skal kunne nå dem alle, ikke
+// kun den ene, der blev valgt til cellens bånd/første prik.
+function openCalendarCellPicker(ids) {
+  const advs = ids.map(id => state.adventures.find(a => a.id === id)).filter(Boolean);
+  openSheet(`
+    <p class="sheet-title">${t('whichAdventure')}</p>
+    <div class="trip-list" style="padding:0 24px 12px">
+      ${advs.map(renderTripRow).join("")}
+    </div>
+  `);
+  document.querySelectorAll(".trip-row").forEach(el => {
+    el.addEventListener("click", () => {
+      closeSheet();
+      navigate(`/adventure/${el.dataset.id}`);
+    });
+  });
+}
+
 export function wireCalendar() {
   document.querySelector('[data-action="back-home"]')?.addEventListener("click", () => navigate("/"));
   document.querySelector('[data-action="cal-menu"]')?.addEventListener("click", openAppMenu);
@@ -137,8 +163,15 @@ export function wireCalendar() {
     calCursor.setDate(1);
     render();
   });
-  document.querySelectorAll(".cal-cell[data-adv-id]").forEach(el => {
-    el.addEventListener("click", () => navigate(`/adventure/${el.dataset.advId}`));
+  document.querySelectorAll(".cal-cell[data-adv-ids]").forEach(el => {
+    el.addEventListener("click", () => {
+      const ids = el.dataset.advIds.split(",");
+      if (ids.length === 1) {
+        navigate(`/adventure/${ids[0]}`);
+      } else {
+        openCalendarCellPicker(ids);
+      }
+    });
   });
   document.querySelectorAll(".trip-row").forEach(el => {
     el.addEventListener("click", () => navigate(`/adventure/${el.dataset.id}`));
