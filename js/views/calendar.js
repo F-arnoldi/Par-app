@@ -107,22 +107,28 @@ export function renderCalendar() {
       <button class="btn-ghost" data-cal="today">${t('today')}</button>
       <button class="btn-ghost" data-cal="next">${t('next')} ›</button>
     </div>
-    <div class="cal-weekdays">
-      ${(WEEKDAYS[state.lang] || WEEKDAYS.da).map(w => `<span>${w}</span>`).join("")}
-    </div>
-    <div class="cal-grid">${cells.join("")}</div>
-    <div class="cal-legend">
-      <span class="legend-item"><span class="legend-band"></span> ${t('legendTrip')}</span>
-      <span class="legend-item"><span class="legend-dot"></span> ${t('legendExperience')}</span>
-    </div>
-    ${thisMonthEvents.length > 0 ? `
-      <p class="section-eyebrow">${t('thisMonth')}</p>
-      <div class="trip-list">
-        ${thisMonthEvents.map(renderTripRow).join("")}
+    <div class="cal-wide-grid">
+      <div class="cal-col-grid">
+        <div class="cal-weekdays">
+          ${(WEEKDAYS[state.lang] || WEEKDAYS.da).map(w => `<span>${w}</span>`).join("")}
+        </div>
+        <div class="cal-grid">${cells.join("")}</div>
+        <div class="cal-legend">
+          <span class="legend-item"><span class="legend-band"></span> ${t('legendTrip')}</span>
+          <span class="legend-item"><span class="legend-dot"></span> ${t('legendExperience')}</span>
+        </div>
       </div>
-    ` : `
-      <p style="color:var(--ink-soft);font-size:13px;margin:24px 4px 0">${t('noEventsInMonth', monthName.toLowerCase())}</p>
-    `}
+      <div class="cal-col-list">
+        ${thisMonthEvents.length > 0 ? `
+          <p class="section-eyebrow">${t('thisMonth')}</p>
+          <div class="trip-list">
+            ${thisMonthEvents.map(renderTripRow).join("")}
+          </div>
+        ` : `
+          <p style="color:var(--ink-soft);font-size:13px;margin:24px 4px 0">${t('noEventsInMonth', monthName.toLowerCase())}</p>
+        `}
+      </div>
+    </div>
   `;
 }
 

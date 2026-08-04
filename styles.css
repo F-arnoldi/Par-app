@@ -2056,6 +2056,24 @@ button { font-family: inherit; }
   flex-wrap: wrap;
 }
 
+/* Kalenderen og "denne måned"-listen er allerede begge altid synlige
+   (ingen fane-skjul som Oversigt/Program) — under 768px stables de bare
+   normalt via display:contents, ved ≥768px lægges de side om side. */
+.cal-wide-grid {
+  display: contents;
+}
+@media (min-width: 768px) {
+  .cal-wide-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  .cal-col-list .section-eyebrow {
+    margin-top: 0;
+  }
+}
+
 .legend-item {
   display: inline-flex;
   align-items: center;
