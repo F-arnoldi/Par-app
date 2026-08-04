@@ -28,7 +28,7 @@ function matchingActivities(q) {
 function renderActivitySearchRow(x) {
   const parent = state.adventures.find(a => a.id === x.adventureId);
   return `
-    <div class="item" data-open-search-activity="${x.id}">
+    <div class="item" data-open-search-activity="${x.id}" role="button" tabindex="0" aria-label="${esc(x.navn)}">
       <div class="item-icon">${icon(kategoriIkon(x.kategori))}</div>
       <div class="item-body">
         <p class="item-title">${esc(x.navn)}</p>

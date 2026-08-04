@@ -110,7 +110,7 @@ export function renderHero(a) {
   const range = formatMonoRange(a.startdato, a.slutdato);
 
   return `
-    <div class="hero" data-id="${a.id}">
+    <div class="hero" data-id="${a.id}" role="button" tabindex="0" aria-label="${esc(a.navn)}">
       <p class="eyebrow">${t('nextAdventure')}</p>
       <h2 class="hero-title">${esc(a.navn)}</h2>
       <p class="hero-dates">${range}</p>
@@ -137,7 +137,7 @@ export function renderTripRow(a) {
   const cd = a.startdato ? shortCountdown(a.startdato) : { num: "", unit: "" };
   const range = a.startdato ? formatMonoRange(a.startdato, a.slutdato) : "";
   return `
-    <div class="trip-row" data-id="${a.id}">
+    <div class="trip-row" data-id="${a.id}" role="button" tabindex="0" aria-label="${esc(a.navn)}">
       <div class="trip-glyph">${icon(a.icon)}</div>
       <div class="trip-info">
         <p class="trip-name">${esc(a.navn)}</p>
@@ -155,7 +155,7 @@ export function renderTripRow(a) {
 
 export function renderIdeaRow(a) {
   return `
-    <div class="trip-row" data-id="${a.id}">
+    <div class="trip-row" data-id="${a.id}" role="button" tabindex="0" aria-label="${esc(a.navn)}">
       <div class="trip-glyph">${icon(a.icon)}</div>
       <div class="trip-info">
         <p class="trip-name">${esc(a.navn)}</p>

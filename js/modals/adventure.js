@@ -29,56 +29,62 @@ export function openAdventureModal(existing = null) {
   openModal(`
     <div class="modal-header">
       <h2>${existing ? t('editAdventure') : t('newAdventure')}</h2>
-      <button class="modal-close" data-modal-close>✕</button>
+      <button class="modal-close" data-modal-close aria-label="${t('closeLabel')}">✕</button>
     </div>
 
-    ${existing ? `
-      <div class="field">
-        <label>${t('typeLabel')}</label>
-        <p class="type-fixed">${icon(type === "oplevelse" ? "ticket" : "suitcase")} ${type === "oplevelse" ? t('typeOplevelse') : t('typeRejse')}</p>
-      </div>
-    ` : `
-      <div class="field">
-        <label>${t('typeLabel')}</label>
-        <div class="type-picker" id="type-picker">
-          <div class="type-option ${type === "rejse" ? "selected" : ""}" data-type="rejse">
-            <span class="type-icon">${icon("suitcase")}</span>
-            <span class="type-label">${t('typeRejse')}</span>
-          </div>
-          <div class="type-option ${type === "oplevelse" ? "selected" : ""}" data-type="oplevelse">
-            <span class="type-icon">${icon("ticket")}</span>
-            <span class="type-label">${t('typeOplevelse')}</span>
+    <form data-modal-form>
+      ${existing ? `
+        <div class="field">
+          <label>${t('typeLabel')}</label>
+          <p class="type-fixed">${icon(type === "oplevelse" ? "ticket" : "suitcase")} ${type === "oplevelse" ? t('typeOplevelse') : t('typeRejse')}</p>
+        </div>
+      ` : `
+        <div class="field">
+          <label>${t('typeLabel')}</label>
+          <div class="type-picker" id="type-picker">
+            <div class="type-option ${type === "rejse" ? "selected" : ""}" data-type="rejse" role="button" tabindex="0" aria-pressed="${type === "rejse"}">
+              <span class="type-icon">${icon("suitcase")}</span>
+              <span class="type-label">${t('typeRejse')}</span>
+            </div>
+            <div class="type-option ${type === "oplevelse" ? "selected" : ""}" data-type="oplevelse" role="button" tabindex="0" aria-pressed="${type === "oplevelse"}">
+              <span class="type-icon">${icon("ticket")}</span>
+              <span class="type-label">${t('typeOplevelse')}</span>
+            </div>
           </div>
         </div>
+      `}
+
+      <div class="field">
+        <label>${t('iconLabel')}</label>
+        <div class="icon-picker" id="icon-picker">
+          ${ICON_VALG.map(name => `
+            <div class="icon-option ${name === a.icon ? "selected" : ""}" data-icon="${name}" role="button" tabindex="0" aria-pressed="${name === a.icon}" aria-label="${name}">${icon(name)}</div>
+          `).join("")}
+        </div>
       </div>
-    `}
 
-    <div class="field">
-      <label>${t('iconLabel')}</label>
-      <div class="icon-picker" id="icon-picker">
-        ${ICON_VALG.map(name => `
-          <div class="icon-option ${name === a.icon ? "selected" : ""}" data-icon="${name}">${icon(name)}</div>
-        `).join("")}
+      <div class="field">
+        <label for="adv-navn">${t('nameLabel')}</label>
+        <input type="text" id="adv-navn" value="${esc(a.navn)}" placeholder="${t('namePlaceholder')}" />
       </div>
-    </div>
 
-    <div class="field">
-      <label for="adv-navn">${t('nameLabel')}</label>
-      <input type="text" id="adv-navn" value="${esc(a.navn)}" placeholder="${t('namePlaceholder')}" />
-    </div>
+      <div id="adventure-type-fields"></div>
 
-    <div id="adventure-type-fields"></div>
-
-    <div class="form-actions">
-      <button class="btn" data-modal-close>${t('cancel')}</button>
-      <button class="btn btn-rust" id="adv-save">${existing ? t('save') : t('create')}</button>
-    </div>
+      <div class="form-actions">
+        <button type="button" class="btn" data-modal-close>${t('cancel')}</button>
+        <button type="submit" class="btn btn-rust" id="adv-save">${existing ? t('save') : t('create')}</button>
+      </div>
+    </form>
   `);
 
   document.querySelectorAll("#icon-picker .icon-option").forEach(el => {
     el.addEventListener("click", () => {
-      document.querySelectorAll("#icon-picker .icon-option").forEach(x => x.classList.remove("selected"));
+      document.querySelectorAll("#icon-picker .icon-option").forEach(x => {
+        x.classList.remove("selected");
+        x.setAttribute("aria-pressed", "false");
+      });
       el.classList.add("selected");
+      el.setAttribute("aria-pressed", "true");
       valgtIcon = el.dataset.icon;
     });
   });
@@ -286,14 +292,21 @@ export function openAdventureModal(existing = null) {
     document.querySelectorAll("#type-picker .type-option").forEach(el => {
       el.addEventListener("click", () => {
         type = el.dataset.type;
-        document.querySelectorAll("#type-picker .type-option").forEach(x => x.classList.remove("selected"));
+        document.querySelectorAll("#type-picker .type-option").forEach(x => {
+          x.classList.remove("selected");
+          x.setAttribute("aria-pressed", "false");
+        });
         el.classList.add("selected");
+        el.setAttribute("aria-pressed", "true");
         renderFields();
       });
     });
   }
 
-  document.getElementById("adv-save").addEventListener("click", () => {
+  // submit, ikke blot click på #adv-save — samme grund som activity.js:
+  // Enter i et enkeltlinje-felt skal gemme uden en ekstra keydown-lytter.
+  document.querySelector("[data-modal-form]").addEventListener("submit", (e) => {
+    e.preventDefault();
     const navnInput = document.getElementById("adv-navn");
     const navn = navnInput.value.trim();
     if (!navn) { showFieldError(navnInput, t('nameRequired')); return; }

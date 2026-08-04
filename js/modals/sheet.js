@@ -10,6 +10,7 @@ import { openInviteModal } from './invite.js';
 import { downloadICS } from '../ics.js';
 import { syncStatus } from '../sync.js';
 import { attachDragToDismiss } from './dismissible.js';
+import { trapFocusAndEscape } from './a11y.js';
 import { scheduleSavingsReminder, cancelSavingsReminder } from '../notifications.js';
 
 let currentClose = null;
@@ -30,7 +31,9 @@ export function openSheet(html) {
   `;
   const backdrop = root.querySelector("[data-sheet-backdrop]");
   const panel = root.querySelector(".sheet");
+  const cleanupA11y = trapFocusAndEscape(panel, closeSheet);
   currentClose = attachDragToDismiss(panel, backdrop, () => {
+    cleanupA11y();
     if (myId !== openId) return;
     root.innerHTML = "";
     currentClose = null;

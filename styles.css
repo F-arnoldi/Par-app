@@ -28,6 +28,23 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Kun ved tastatur-navigation (:focus-visible), aldrig ved museklik —
+   .field input/.comment-input-row input har allerede deres egen
+   kant-farve-baserede fokusindikator (se længere nede) og er bevidst
+   udeladt her, for ikke at vise to indikatorer oven i hinanden. */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 2px;
+}
+input:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 1px;
+}
+
 html, body {
   margin: 0;
   padding: 0;

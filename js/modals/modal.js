@@ -1,5 +1,6 @@
 // ---------- Modaler (fælles skal) ----------
 import { attachDragToDismiss } from './dismissible.js';
+import { trapFocusAndEscape } from './a11y.js';
 
 let currentClose = null;
 // Tæller op ved hvert openModal()-kald. En lukning (animateClose, se
@@ -28,7 +29,13 @@ export function openModal(html, onClosed) {
   `;
   const backdrop = root.querySelector("[data-modal-backdrop]");
   const panel = root.querySelector(".modal");
+  const cleanupA11y = trapFocusAndEscape(panel, closeModal);
   currentClose = attachDragToDismiss(panel, backdrop, () => {
+    // Egen oprydning kører ALTID, uanset staleness — den rører kun sin
+    // egen keydown-lytter, aldrig DOM'en. Kun DOM-oprydningen nedenfor skal
+    // stoppes for en forældet instans, ellers ville den rydde et NYERE
+    // arks innerHTML væk (se openId-kommentaren ovenfor).
+    cleanupA11y();
     if (myId !== openId) return;
     root.innerHTML = "";
     currentClose = null;
@@ -38,7 +45,13 @@ export function openModal(html, onClosed) {
   backdrop.addEventListener("click", e => {
     if (e.target.hasAttribute("data-modal-backdrop")) closeModal();
   });
-  root.querySelector("[data-modal-close]")?.addEventListener("click", closeModal);
+  // querySelectorAll, ikke querySelector — et ark har typisk TO af disse
+  // (luk-krydset i headeren og en "Annuller"-knap i form-actions); kun
+  // den første ville ellers få en lytter, og den anden ville ikke gøre
+  // noget ved et klik.
+  root.querySelectorAll("[data-modal-close]").forEach(el => {
+    el.addEventListener("click", closeModal);
+  });
 }
 
 // Samme udgang uanset udløser (træk, baggrund, luk-knap, eller et

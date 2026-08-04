@@ -1,10 +1,28 @@
 // ---------- Profil ----------
 import { t } from '../i18n.js';
 import { state, saveData } from '../data.js';
+import { todayISO } from '../utils.js';
 import { navigate, render } from '../router.js';
 import { toast } from '../toast.js';
 import { hasLinkedEmail, myEmail, signOut } from '../sync.js';
 import { confirmAction } from '../modals/confirm.js';
+
+// "Download mine data" — hele state minus hasLoggedInBefore, som er et
+// rent enheds-lokalt flag (styrer kun login-gaten offline) og ikke
+// brugerens egne data. Samme Blob+download-link-mønster som ics.js.
+function downloadDataExport() {
+  const { hasLoggedInBefore, ...exportable } = state;
+  const json = JSON.stringify(exportable, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `nyt-eventyr-data-${todayISO()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export function renderProfile() {
   const otherLangName = state.lang === "da" ? t('langNameEn') : t('langNameDa');
@@ -44,6 +62,12 @@ export function renderProfile() {
       <p class="paper-eyebrow">${t('language')}</p>
       <button class="btn btn-block" data-action="toggle-lang">${otherLangName}</button>
     </div>
+
+    <div class="paper">
+      <p class="paper-eyebrow">${t('dataSectionTitle')}</p>
+      <p style="margin:0 0 12px;font-size:13px;color:var(--ink-soft);line-height:1.5">${t('dataSectionHint')}</p>
+      <button class="btn btn-block" data-action="export-data">${t('downloadDataBtn')}</button>
+    </div>
   `;
 }
 
@@ -80,4 +104,6 @@ export function wireProfile() {
     saveData();
     render();
   });
+
+  document.querySelector('[data-action="export-data"]')?.addEventListener("click", downloadDataExport);
 }

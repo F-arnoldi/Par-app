@@ -19,7 +19,7 @@ function renderPackingRow(item) {
       <div class="item-body">
         <p class="item-title ${item.checket ? "packed" : ""}">${esc(item.tekst)}</p>
       </div>
-      <button class="icon-btn" data-packing-delete="${item.id}" title="${t('delete')}">✕</button>
+      <button class="icon-btn" data-packing-delete="${item.id}" title="${t('delete')}" aria-label="${t('delete')}">✕</button>
     </div>
   `;
 }

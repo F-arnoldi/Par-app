@@ -61,13 +61,13 @@ function detailsFieldsHtml(x) {
     <div class="field">
       <label>${t('statusLabel')}</label>
       <div class="status-picker" id="act-status-picker">
-        <div class="type-option ${(!x.status || x.status === "idé") ? "selected" : ""}" data-status="idé">
+        <div class="type-option ${(!x.status || x.status === "idé") ? "selected" : ""}" data-status="idé" role="button" tabindex="0" aria-pressed="${!x.status || x.status === "idé"}">
           <span class="type-label">${t('status_ide')}</span>
         </div>
-        <div class="type-option ${x.status === "booket" ? "selected" : ""}" data-status="booket">
+        <div class="type-option ${x.status === "booket" ? "selected" : ""}" data-status="booket" role="button" tabindex="0" aria-pressed="${x.status === "booket"}">
           <span class="type-label">${t('status_booket')}</span>
         </div>
-        <div class="type-option ${x.status === "betalt" ? "selected" : ""}" data-status="betalt">
+        <div class="type-option ${x.status === "betalt" ? "selected" : ""}" data-status="betalt" role="button" tabindex="0" aria-pressed="${x.status === "betalt"}">
           <span class="type-label">${t('status_betalt')}</span>
         </div>
       </div>
@@ -119,38 +119,40 @@ export function openActivityModal(adv, existing = null, preset = null) {
   openModal(`
     <div class="modal-header">
       <h2>${kilde ? kildeNavn(kilde) : (existing ? t('editActivityTitle') : t('newActivityTitle'))}</h2>
-      <button class="modal-close" data-modal-close>✕</button>
+      <button class="modal-close" data-modal-close aria-label="${t('closeLabel')}">✕</button>
     </div>
     ${existing && x.createdBy && adv.serverId ? `<p class="added-by-caption" id="act-added-by"></p>` : ""}
 
-    ${nameFieldsHtml}
+    <form data-modal-form>
+      ${nameFieldsHtml}
 
-    <div class="field-row">
-      <div class="field">
-        <label>${t('date')}</label>
-        <button type="button" class="date-select" id="act-date-select" data-start="${x.dato || ""}">
-          ${t('pickDate')}
-        </button>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('date')}</label>
+          <button type="button" class="date-select" id="act-date-select" data-start="${x.dato || ""}">
+            ${t('pickDate')}
+          </button>
+        </div>
+        <div class="field">
+          <label for="act-pris">${t('priceLabelOptional')}</label>
+          <input type="number" id="act-pris" value="${x.pris}" placeholder="0" inputmode="numeric" />
+          <p class="foreign-hint" id="act-pris-hint"></p>
+        </div>
       </div>
+
       <div class="field">
-        <label for="act-pris">${t('priceLabelOptional')}</label>
-        <input type="number" id="act-pris" value="${x.pris}" placeholder="0" inputmode="numeric" />
-        <p class="foreign-hint" id="act-pris-hint"></p>
+        <label for="act-faktisk-pris">${t('actualPriceLabel')}</label>
+        <input type="number" id="act-faktisk-pris" value="${x.faktiskPris ?? ""}" placeholder="0" inputmode="numeric" />
+        <p class="foreign-hint" id="act-faktisk-pris-hint"></p>
       </div>
-    </div>
 
-    <div class="field">
-      <label for="act-faktisk-pris">${t('actualPriceLabel')}</label>
-      <input type="number" id="act-faktisk-pris" value="${x.faktiskPris ?? ""}" placeholder="0" inputmode="numeric" />
-      <p class="foreign-hint" id="act-faktisk-pris-hint"></p>
-    </div>
+      <div id="act-details-area"></div>
 
-    <div id="act-details-area"></div>
-
-    <div class="form-actions">
-      <button class="btn" data-modal-close>${t('cancel')}</button>
-      <button class="btn btn-rust" id="act-save">${existing ? t('save') : t('add')}</button>
-    </div>
+      <div class="form-actions">
+        <button type="button" class="btn" data-modal-close>${t('cancel')}</button>
+        <button type="submit" class="btn btn-rust" id="act-save">${existing ? t('save') : t('add')}</button>
+      </div>
+    </form>
     ${existing ? `
       <button type="button" class="btn btn-block" id="act-delete" style="margin-top:10px;color:var(--rust);border-color:var(--rust-soft)">
         ${t('deleteActivity')}
@@ -171,8 +173,12 @@ export function openActivityModal(adv, existing = null, preset = null) {
   function wireStatusPicker() {
     document.querySelectorAll("#act-status-picker .type-option").forEach(el => {
       el.addEventListener("click", () => {
-        document.querySelectorAll("#act-status-picker .type-option").forEach(o => o.classList.remove("selected"));
+        document.querySelectorAll("#act-status-picker .type-option").forEach(o => {
+          o.classList.remove("selected");
+          o.setAttribute("aria-pressed", "false");
+        });
         el.classList.add("selected");
+        el.setAttribute("aria-pressed", "true");
         valgtStatus = el.dataset.status;
       });
     });
@@ -318,7 +324,11 @@ export function openActivityModal(adv, existing = null, preset = null) {
     });
   });
 
-  document.getElementById("act-save").addEventListener("click", () => {
+  // submit (ikke blot et click på #act-save) så Enter i et hvilket som
+  // helst enkeltlinje-felt i formularen også gemmer — browserens native
+  // implicitte formular-indsendelse, ingen ekstra keydown-lytter nødvendig.
+  document.querySelector("[data-modal-form]").addEventListener("submit", (e) => {
+    e.preventDefault();
     // navn/kategori er faste for en kilde-tagget post (fly/hotel/
     // transport) — der findes ingen #act-navn/#act-kat at læse fra, se
     // nameFieldsHtml ovenfor.

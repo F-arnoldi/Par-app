@@ -133,7 +133,7 @@ export function renderOpsparingTab(a) {
                 </p>
               </div>
               <div class="item-actions">
-                <button class="icon-btn" data-del-saving="${s.id}" title="${t('delete')}">✕</button>
+                <button class="icon-btn" data-del-saving="${s.id}" title="${t('delete')}" aria-label="${t('delete')}">✕</button>
               </div>
             </div>
           `).join("")}

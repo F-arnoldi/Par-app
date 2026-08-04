@@ -11,6 +11,7 @@ import { cap, toISO, esc } from '../utils.js';
 import { WEEKDAYS } from '../constants.js';
 import { state } from '../data.js';
 import { attachDragToDismiss } from './dismissible.js';
+import { trapFocusAndEscape } from './a11y.js';
 
 export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm, opts = {}) {
   const singleOnly = !!opts.singleOnly;
@@ -125,7 +126,11 @@ export function openDatePicker(currentStart, currentEnd, eventyrNavn, onConfirm,
     // Datovælgeren bygger sin egen .sheet-markup direkte herover i stedet
     // for at kalde openSheet(), så den kobler træk-for-at-luk til
     // eksplicit — samme fælles lukke-animation som resten af appen.
-    dismiss = attachDragToDismiss(sheetEl, backdropEl, () => { rootEl.innerHTML = ""; });
+    const cleanupA11y = trapFocusAndEscape(sheetEl, close);
+    dismiss = attachDragToDismiss(sheetEl, backdropEl, () => {
+      cleanupA11y();
+      rootEl.innerHTML = "";
+    });
 
     // ---- Lyttere: sættes op ÉN gang, aldrig igen ----
     rootEl.querySelector("[data-picker-backdrop]").addEventListener("click", e => {

@@ -53,7 +53,7 @@ export function renderActivityCard(x, canVote = false) {
   const hasChips = !!(x.telefon || x.reference || validLink);
 
   return `
-    <div class="item act-card" data-open-activity="${x.id}">
+    <div class="item act-card" data-open-activity="${x.id}" role="button" tabindex="0" aria-label="${esc(x.navn)}">
       <div class="item-icon">${icon(kategoriIkon(x.kategori))}</div>
       <div class="item-body">
         <p class="item-title">

@@ -32,11 +32,11 @@ function isValidUUID(id) { return UUID_RE.test(id); }
 // Postgres returnerer "+00:00" med anden decimal-præcision end JS's egen
 // toISOString() ("Z", altid 3 decimaler), så en streng-sammenligning ville
 // kunne give et forkert svar selv når begge peger på samme øjeblik.
-function isNewer(a, b) {
+export function isNewer(a, b) {
   return new Date(a).getTime() > new Date(b).getTime();
 }
 
-function isDirty(record) {
+export function isDirty(record) {
   if (!record.serverId) return true;
   if (!state.lastSyncedAt) return true;
   return isNewer(record.updatedAt, state.lastSyncedAt);
@@ -59,7 +59,7 @@ function findAdventureByLocalId(id) {
 
 // ---------- Lokal → server ----------
 
-function toAdventureRow(a) {
+export function toAdventureRow(a) {
   const plan = state.plans[a.id] || {};
   return {
     id: a.serverId,
@@ -84,7 +84,7 @@ function toAdventureRow(a) {
   };
 }
 
-function toActivityRow(x) {
+export function toActivityRow(x) {
   return {
     id: x.serverId,
     adventure_id: findAdventureByLocalId(x.adventureId)?.serverId,
@@ -114,7 +114,7 @@ function toActivityRow(x) {
   };
 }
 
-function toSavingsRow(s) {
+export function toSavingsRow(s) {
   return {
     id: s.serverId,
     adventure_id: findAdventureByLocalId(s.adventureId)?.serverId,
@@ -132,7 +132,7 @@ function toSavingsRow(s) {
 
 // ---------- Server → lokal ----------
 
-function fromAdventureRow(row) {
+export function fromAdventureRow(row) {
   return {
     id: row.id,
     serverId: row.id,
@@ -156,7 +156,7 @@ function fromAdventureRow(row) {
   };
 }
 
-function fromActivityRow(row, localAdventureId) {
+export function fromActivityRow(row, localAdventureId) {
   return {
     id: row.id,
     adventureId: localAdventureId,
@@ -187,7 +187,7 @@ function fromActivityRow(row, localAdventureId) {
   };
 }
 
-function fromSavingsRow(row, localAdventureId) {
+export function fromSavingsRow(row, localAdventureId) {
   return {
     id: row.id,
     adventureId: localAdventureId,
@@ -205,7 +205,7 @@ function fromSavingsRow(row, localAdventureId) {
   };
 }
 
-function mergeAdventures(rows) {
+export function mergeAdventures(rows) {
   for (const row of rows) {
     let local = state.adventures.find(a => a.serverId === row.id);
     if (!local) {
@@ -231,7 +231,7 @@ function mergeAdventures(rows) {
   }
 }
 
-function mergeActivities(rows) {
+export function mergeActivities(rows) {
   for (const row of rows) {
     const local = state.activities.find(x => x.serverId === row.id);
     if (!local) {
@@ -246,7 +246,7 @@ function mergeActivities(rows) {
   }
 }
 
-function mergeSavings(rows) {
+export function mergeSavings(rows) {
   for (const row of rows) {
     const local = state.savings.find(s => s.serverId === row.id);
     if (!local) {

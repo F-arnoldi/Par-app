@@ -54,6 +54,19 @@ reconcileSavingsReminders();
 window.addEventListener("hashchange", render);
 render();
 
+// Gør enhver klikbar <div role="button"> (fx trip-rows, type-/ikon-
+// vælgere) tastatur-betjenbar med ét delt, app-bredt lag i stedet for en
+// keydown-lytter pr. gengivelsessted — så længe elementet selv har
+// role="button" og tabindex="0" i sit markup, virker Enter/Mellemrum af
+// sig selv, uanset hvilken visning det kommer fra.
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const el = e.target.closest('[role="button"]');
+  if (!el) return;
+  e.preventDefault();
+  el.click();
+});
+
 if (SYNC_ENABLED) {
   // Dynamisk import — aldrig statisk i kernemodul-grafen — så en genuint
   // offline første indlæsning uden cache for esm.sh stadig lader appen

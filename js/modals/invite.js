@@ -13,7 +13,7 @@ export function openInviteModal(a) {
     openModal(`
       <div class="modal-header">
         <h2>${t('invitePartnerTitle')}</h2>
-        <button class="modal-close" data-modal-close>✕</button>
+        <button class="modal-close" data-modal-close aria-label="${t('closeLabel')}">✕</button>
       </div>
       <p style="color:var(--ink-soft);font-size:14px;line-height:1.5;margin:0">${t('inviteNotSyncedYet')}</p>
     `);
@@ -25,7 +25,7 @@ export function openInviteModal(a) {
   openModal(`
     <div class="modal-header">
       <h2>${t('invitePartnerTitle')}</h2>
-      <button class="modal-close" data-modal-close>✕</button>
+      <button class="modal-close" data-modal-close aria-label="${t('closeLabel')}">✕</button>
     </div>
 
     <p style="color:var(--ink-soft);font-size:14px;margin:0 0 16px;line-height:1.5">

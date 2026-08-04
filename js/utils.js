@@ -128,6 +128,10 @@ export function kildeNavn(kilde) {
 // Fjerner en evt. tidligere fejlbesked for SAMME felt først, så gentagne
 // fejlslagne forsøg ikke hober flere linjer op.
 export function showFieldError(el, message) {
+  // Nogle felter findes kun betinget i markup'et (fx adv-mål, som kun
+  // gengives for en EKSISTERENDE rejse) — kalderen tjekker ikke altid selv
+  // om feltet rent faktisk blev fundet, før den rydder en tidligere fejl.
+  if (!el) return;
   const existing = el.parentElement.querySelector(".field-error");
   existing?.remove();
   if (!message) return;
