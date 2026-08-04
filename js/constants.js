@@ -8,6 +8,17 @@ export const KATEGORIER = [
   { id: "oplevelse", ikon: "ticket" },
 ];
 
+// Fly/hotel/transport er ikke almindelige aktiviteter — de er rejse-
+// egenskaber, der (som andre aktiviteter) lever i state.activities med
+// kilde sat, men holdes ude af Program-fanens liste og redigeres fra
+// eventyr-arket/Oversigt i stedet. Se selectors.js's findLinkedActivity/
+// syncLinkedActivity og utils.js's kildeNavn/kildeIkon.
+export const KILDE_INFO = {
+  fly:       { kategori: "transport", ikon: "plane" },
+  hotel:     { kategori: "ophold",    ikon: "bed" },
+  transport: { kategori: "transport", ikon: "suitcase" },
+};
+
 export const ICON_VALG = ["globe","beach","mountain","landmark","ferris-wheel","wine","spa","ski","boat","tent","sunrise","palette"];
 
 export const MAANEDER_MONO = {

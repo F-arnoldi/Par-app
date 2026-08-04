@@ -1,13 +1,14 @@
 // ----- Opret / redigér eventyr -----
 import { t } from '../i18n.js';
 import { icon } from '../icons.js';
-import { esc, formatMonoDate, formatMonoRange, todayISO } from '../utils.js';
-import { ICON_VALG } from '../constants.js';
+import { esc, formatMonoDate, formatMonoRange, formatKr, todayISO, kildeNavn, kildeIkon } from '../utils.js';
+import { ICON_VALG, KILDE_INFO } from '../constants.js';
 import { state, saveData, uid, touch } from '../data.js';
 import { findLinkedActivity, syncLinkedActivity } from '../selectors.js';
 import { navigate, render } from '../router.js';
 import { openDatePicker } from './datepicker.js';
 import { openModal, closeModal } from './modal.js';
+import { openActivityModal } from './activity.js';
 
 export function openAdventureModal(existing = null) {
   const a = existing || {
@@ -135,25 +136,49 @@ export function openAdventureModal(existing = null) {
       const hotelAct = existing ? findLinkedActivity(a.id, "hotel") : null;
       const transportAct = existing ? findLinkedActivity(a.id, "transport") : null;
 
-      // Beløb og fly/hotel/transport-priser er kun altid synlige ved
-      // REDIGERING af et eksisterende eventyr (eventuelle tal skal aldrig
-      // gemme sig bag en lukket "tilføj detaljer") — ved OPRETTELSE lever
-      // de bag et progressivt "+ Tilføj detaljer"-trin herunder, så
-      // brugeren først mødes af type/ikon/navn/datoer.
-      const detailsFieldsHtml = `
+      // Ved OPRETTELSE er fly/hotel/transport en simpel pris bag et
+      // progressivt "+ Tilføj detaljer"-trin — eventyret findes jo ikke i
+      // state.adventures endnu, så der er intet at knytte en fuld
+      // aktivitets-post med rige detaljer til (se save-handleren, som
+      // kun kalder syncLinkedActivity for et NYT eventyr). Ved REDIGERING
+      // er de i stedet hver sin egen detalje-editor — samme skabelon som
+      // en aktivitet — åbnet ved at lukke dette ark og kalde
+      // openActivityModal direkte, se klik-håndteringen herunder.
+      const simpleDetailsFieldsHtml = `
         <div class="field-row">
           <div class="field" style="margin-bottom:0">
             <label for="adv-fly">${t('flyLabel')}</label>
-            <input type="number" id="adv-fly" value="${flyAct ? flyAct.pris : ""}" placeholder="${t('optional')}" inputmode="numeric" />
+            <input type="number" id="adv-fly" placeholder="${t('optional')}" inputmode="numeric" />
           </div>
           <div class="field" style="margin-bottom:0">
             <label for="adv-hotel">${t('hotelLabel')}</label>
-            <input type="number" id="adv-hotel" value="${hotelAct ? hotelAct.pris : ""}" placeholder="${t('optional')}" inputmode="numeric" />
+            <input type="number" id="adv-hotel" placeholder="${t('optional')}" inputmode="numeric" />
           </div>
         </div>
         <div class="field">
           <label for="adv-transport">${t('transportLabel')}</label>
-          <input type="number" id="adv-transport" value="${transportAct ? transportAct.pris : ""}" placeholder="${t('optional')}" inputmode="numeric" />
+          <input type="number" id="adv-transport" placeholder="${t('optional')}" inputmode="numeric" />
+        </div>
+      `;
+
+      function detailRowHtml(kilde, act) {
+        if (!act) {
+          return `<button type="button" class="detail-row detail-row-empty" data-detail="${kilde}">+ ${kildeNavn(kilde)}</button>`;
+        }
+        return `
+          <button type="button" class="detail-row" data-detail="${kilde}">
+            <span>${icon(kildeIkon(kilde))} ${kildeNavn(kilde)}</span>
+            <span class="detail-row-price">${formatKr(act.pris)}</span>
+          </button>
+        `;
+      }
+
+      const richDetailsFieldsHtml = `
+        <div class="field">
+          <label>${t('tripDetailsPrompt')}</label>
+          ${detailRowHtml("fly", flyAct)}
+          ${detailRowHtml("hotel", hotelAct)}
+          ${detailRowHtml("transport", transportAct)}
         </div>
       `;
 
@@ -171,7 +196,7 @@ export function openAdventureModal(existing = null) {
             <label for="adv-mål">${t('amountSetAsideLabel')}</label>
             <input type="number" id="adv-mål" value="${a.målBeløb || ""}" placeholder="${t('optional')}" inputmode="numeric" />
           </div>
-          ${detailsFieldsHtml}
+          ${richDetailsFieldsHtml}
         ` : `
           <div id="trip-details-area"></div>
         `}
@@ -208,10 +233,20 @@ export function openAdventureModal(existing = null) {
               renderDetailsArea();
             });
           } else {
-            area.innerHTML = detailsFieldsHtml;
+            area.innerHTML = simpleDetailsFieldsHtml;
           }
         }
         renderDetailsArea();
+      } else {
+        const linked = { fly: flyAct, hotel: hotelAct, transport: transportAct };
+        document.querySelectorAll("[data-detail]").forEach(el => {
+          el.addEventListener("click", () => {
+            const kilde = el.dataset.detail;
+            const act = linked[kilde];
+            closeModal();
+            openActivityModal(a, act, act ? null : { kilde, kategori: KILDE_INFO[kilde].kategori });
+          });
+        });
       }
 
       getFieldValues = () => {
@@ -315,10 +350,15 @@ export function openAdventureModal(existing = null) {
       } else {
         state.adventures.push(record);
       }
-      const dato = startdato || todayISO();
-      syncLinkedActivity(a.id, "fly", "Fly", "transport", dato, flyPris);
-      syncLinkedActivity(a.id, "hotel", "Hotel", "ophold", dato, hotelPris);
-      syncLinkedActivity(a.id, "transport", "Transport", "transport", dato, transportPris);
+      // Kun ved OPRETTELSE — ved redigering har fly/hotel/transport hver
+      // deres egen detalje-editor (se klik-håndteringen for [data-detail]
+      // ovenfor), som allerede gemmer sig selv uafhængigt af dette ark.
+      if (!existing) {
+        const dato = startdato || todayISO();
+        syncLinkedActivity(a.id, "fly", kildeNavn("fly"), KILDE_INFO.fly.kategori, dato, flyPris);
+        syncLinkedActivity(a.id, "hotel", kildeNavn("hotel"), KILDE_INFO.hotel.kategori, dato, hotelPris);
+        syncLinkedActivity(a.id, "transport", kildeNavn("transport"), KILDE_INFO.transport.kategori, dato, transportPris);
+      }
       saveData();
       closeModal();
       if (!existing) {

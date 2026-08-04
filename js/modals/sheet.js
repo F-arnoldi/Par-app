@@ -12,8 +12,12 @@ import { syncStatus } from '../sync.js';
 import { attachDragToDismiss } from './dismissible.js';
 
 let currentClose = null;
+// Se modal.js's samme openId-mønster: en forsinket lukning fra en
+// tidligere sheet-instans må ikke rydde et sheet, der er åbnet efter den.
+let openId = 0;
 
 export function openSheet(html) {
+  const myId = ++openId;
   const root = document.getElementById("sheet-root");
   root.innerHTML = `
     <div class="sheet-backdrop" data-sheet-backdrop>
@@ -26,6 +30,7 @@ export function openSheet(html) {
   const backdrop = root.querySelector("[data-sheet-backdrop]");
   const panel = root.querySelector(".sheet");
   currentClose = attachDragToDismiss(panel, backdrop, () => {
+    if (myId !== openId) return;
     root.innerHTML = "";
     currentClose = null;
   });

@@ -608,6 +608,48 @@ button { font-family: inherit; }
   background: rgba(193, 99, 58, 0.03);
 }
 
+/* Rejsedetalje-rækker (fly/hotel/transport) — udfyldt: en opsummering,
+   tom: samme afvisningsfrie tryk-mønster som .placeholder-tap, bare
+   kompakt nok til at stå tre i træk. Bruges af adventure.js (redigér-
+   eventyr-arket) og oversigt.js (Oversigt-fanen). */
+.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+.detail-row:hover { border-color: var(--rust); }
+
+.detail-row-price {
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.detail-row-empty {
+  justify-content: center;
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-soft);
+}
+.detail-row-empty:hover {
+  border-color: var(--rust);
+  color: var(--rust);
+  background: rgba(193, 99, 58, 0.03);
+}
+
 /* Stats */
 .stat-row {
   display: grid;

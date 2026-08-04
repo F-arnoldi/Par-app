@@ -1,7 +1,7 @@
 // ---------- Utilities ----------
 import { state } from './data.js';
 import { t, locale } from './i18n.js';
-import { MAANEDER_MONO, KATEGORIER } from './constants.js';
+import { MAANEDER_MONO, KATEGORIER, KILDE_INFO } from './constants.js';
 
 export function todayISO() {
   return toISO(new Date());
@@ -99,6 +99,14 @@ export function kategoriIkon(id) {
 export function kategoriNavn(id) {
   const k = KATEGORIER.find(k => k.id === id);
   return k ? t('kat_' + id) : "";
+}
+
+export function kildeIkon(kilde) {
+  return KILDE_INFO[kilde]?.ikon || "pin";
+}
+
+export function kildeNavn(kilde) {
+  return t('kilde_' + kilde);
 }
 
 export function buildMapsUrl(adresse) {

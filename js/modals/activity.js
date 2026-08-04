@@ -1,6 +1,7 @@
 // ----- Opret / redigér aktivitet -----
 import { t } from '../i18n.js';
-import { esc, isSafeHttpUrl } from '../utils.js';
+import { icon } from '../icons.js';
+import { esc, isSafeHttpUrl, kildeNavn, kildeIkon } from '../utils.js';
 import { KATEGORIER } from '../constants.js';
 import { state, saveData, uid, touch, tombstone } from '../data.js';
 import { openModal, closeModal } from './modal.js';
@@ -70,12 +71,19 @@ function detailsFieldsHtml(x) {
   `;
 }
 
-export function openActivityModal(adv, existing = null) {
+// preset (kun brugt for en NY, ikke-eksisterende aktivitet) markerer at
+// dette er en fly/hotel/transport-detalje frem for en almindelig
+// aktivitet — se KILDE_INFO. Navn/kategori er da faste (ikke noget
+// brugeren vælger), og posten gemmes med kilde sat, så den fortsat
+// findes af findLinkedActivity/syncLinkedActivity og holdes ude af
+// Program-fanens liste (se program.js).
+export function openActivityModal(adv, existing = null, preset = null) {
+  const kilde = existing?.kilde || preset?.kilde || null;
   const x = existing || {
     id: uid(),
     adventureId: adv.id,
-    navn: "",
-    kategori: "oplevelse",
+    navn: preset ? kildeNavn(preset.kilde) : "",
+    kategori: preset ? preset.kategori : "oplevelse",
     dato: "",
     pris: "",
   };
@@ -83,12 +91,12 @@ export function openActivityModal(adv, existing = null) {
   let detailsShown = existing ? hasAnyDetail(x) : false;
   let valgtStatus = x.status || "idé";
 
-  openModal(`
-    <div class="modal-header">
-      <h2>${existing ? t('editActivityTitle') : t('newActivityTitle')}</h2>
-      <button class="modal-close" data-modal-close>✕</button>
+  const nameFieldsHtml = kilde ? `
+    <div class="field">
+      <label>${t('nameLabel')}</label>
+      <p class="type-fixed">${icon(kildeIkon(kilde))} ${kildeNavn(kilde)}</p>
     </div>
-
+  ` : `
     <div class="field">
       <label for="act-navn">${t('nameLabel')}</label>
       <input type="text" id="act-navn" value="${esc(x.navn)}" placeholder="${t('namePlaceholderAct')}" />
@@ -102,6 +110,15 @@ export function openActivityModal(adv, existing = null) {
         `).join("")}
       </select>
     </div>
+  `;
+
+  openModal(`
+    <div class="modal-header">
+      <h2>${kilde ? kildeNavn(kilde) : (existing ? t('editActivityTitle') : t('newActivityTitle'))}</h2>
+      <button class="modal-close" data-modal-close>✕</button>
+    </div>
+
+    ${nameFieldsHtml}
 
     <div class="field-row">
       <div class="field">
@@ -163,8 +180,11 @@ export function openActivityModal(adv, existing = null) {
   });
 
   document.getElementById("act-save").addEventListener("click", () => {
-    const navn = document.getElementById("act-navn").value.trim();
-    const kategori = document.getElementById("act-kat").value;
+    // navn/kategori er faste for en kilde-tagget post (fly/hotel/
+    // transport) — der findes ingen #act-navn/#act-kat at læse fra, se
+    // nameFieldsHtml ovenfor.
+    const navn = kilde ? kildeNavn(kilde) : document.getElementById("act-navn").value.trim();
+    const kategori = kilde ? x.kategori : document.getElementById("act-kat").value;
     const dato = document.getElementById("act-dato").value;
     const pris = Number(document.getElementById("act-pris").value) || 0;
 
@@ -189,7 +209,7 @@ export function openActivityModal(adv, existing = null) {
     const record = touch(existing
       ? { ...existing, navn, kategori, dato, pris, ...detailOverrides }
       : {
-          id: x.id, adventureId: adv.id, navn, kategori, dato, pris, kilde: null,
+          id: x.id, adventureId: adv.id, navn, kategori, dato, pris, kilde,
           startTid: "", slutTid: "", varerTil: "", stedNavn: "", adresse: "",
           reference: "", link: "", telefon: "", noter: "", status: "idé",
           ...detailOverrides,

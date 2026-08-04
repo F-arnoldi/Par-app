@@ -1,8 +1,11 @@
 // ---------- Oversigt-fane ----------
 import { t } from '../i18n.js';
-import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO } from '../utils.js';
+import { icon } from '../icons.js';
+import { formatKr, formatMonoDate, formatDate, heroCountdown, toISO, kildeNavn, kildeIkon } from '../utils.js';
 import { totalSparet, totalAktivitetsPris, planFor, hasOpsparing, findLinkedActivity } from '../selectors.js';
+import { KILDE_INFO } from '../constants.js';
 import { openAdventureModal } from '../modals/adventure.js';
+import { openActivityModal } from '../modals/activity.js';
 
 export function renderOversigtTab(a) {
   const sparet    = totalSparet(a.id);
@@ -114,19 +117,34 @@ export function renderOversigtTab(a) {
     `;
   }
 
-  // Diskret afviselig-fri prompt — kun for rejser, og kun de(n) af fly/
-  // hotel/transport der reelt mangler. Alle tre peger på samme sted
-  // (redigér-eventyr-arket), som nu altid viser dem samlet, uanset om
-  // brugeren sprang dem over ved oprettelsen.
+  // Kun for rejser. Hver af fly/hotel/transport vises enten som en
+  // afvisningsfri "+ tilføj"-prompt (intet indtastet endnu) eller en
+  // udfyldt opsummeringsrække (pris, tryk for at redigere) — begge
+  // åbner samme rige detalje-editor som en aktivitet, direkte, uden
+  // omvejen om redigér-eventyr-arket. Se adventure.js's [data-detail]
+  // for samme mønster i redigeringsarket.
   const flyAct = a.type === "rejse" ? findLinkedActivity(a.id, "fly") : null;
   const hotelAct = a.type === "rejse" ? findLinkedActivity(a.id, "hotel") : null;
   const transportAct = a.type === "rejse" ? findLinkedActivity(a.id, "transport") : null;
-  const tripDetailsHtml = (a.type === "rejse" && (!flyAct || !hotelAct || !transportAct)) ? `
+
+  function detailRowHtml(kilde, act) {
+    if (!act) {
+      return `<button type="button" class="detail-row detail-row-empty" data-detail="${kilde}" style="margin-bottom:8px">+ ${kildeNavn(kilde)}</button>`;
+    }
+    return `
+      <button type="button" class="detail-row" data-detail="${kilde}" style="margin-bottom:8px">
+        <span>${icon(kildeIkon(kilde))} ${kildeNavn(kilde)}</span>
+        <span class="detail-row-price">${formatKr(act.pris)}</span>
+      </button>
+    `;
+  }
+
+  const tripDetailsHtml = a.type === "rejse" ? `
     <div class="paper">
       <p class="paper-eyebrow">${t('tripDetailsPrompt')}</p>
-      ${!flyAct ? `<button class="placeholder-tap" data-action="add-fly" style="margin-bottom:8px">+ ${t('flyLabel')}</button>` : ""}
-      ${!hotelAct ? `<button class="placeholder-tap" data-action="add-hotel" style="margin-bottom:8px">+ ${t('hotelLabel')}</button>` : ""}
-      ${!transportAct ? `<button class="placeholder-tap" data-action="add-transport">+ ${t('transportLabel')}</button>` : ""}
+      ${detailRowHtml("fly", flyAct)}
+      ${detailRowHtml("hotel", hotelAct)}
+      ${detailRowHtml("transport", transportAct)}
     </div>
   ` : "";
 
@@ -162,7 +180,12 @@ export function renderOversigtTab(a) {
 export function wireOversigt(a) {
   document.querySelector('[data-action="edit-dates"]')?.addEventListener("click", () => openAdventureModal(a));
   document.querySelector('[data-action="edit-mål"]')?.addEventListener("click", () => openAdventureModal(a));
-  document.querySelector('[data-action="add-fly"]')?.addEventListener("click", () => openAdventureModal(a));
-  document.querySelector('[data-action="add-hotel"]')?.addEventListener("click", () => openAdventureModal(a));
-  document.querySelector('[data-action="add-transport"]')?.addEventListener("click", () => openAdventureModal(a));
+
+  document.querySelectorAll("[data-detail]").forEach(el => {
+    el.addEventListener("click", () => {
+      const kilde = el.dataset.detail;
+      const act = findLinkedActivity(a.id, kilde);
+      openActivityModal(a, act, act ? null : { kilde, kategori: KILDE_INFO[kilde].kategori });
+    });
+  });
 }

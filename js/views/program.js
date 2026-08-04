@@ -115,7 +115,12 @@ function groupActivities(a, activities) {
 }
 
 export function renderProgramTab(a) {
-  const akt = activitiesFor(a.id);
+  // Fly/hotel/transport (kilde sat) er rejse-detaljer, ikke aktiviteter —
+  // de redigeres fra eventyr-arket/Oversigt (se adventure.js/oversigt.js)
+  // og skal ikke optræde som kort her. total forbliver UFILTRERET
+  // (totalAktivitetsPris tæller alt inkl. dem) — det er stadig den fulde
+  // rejseomkostning, uanset at de ikke er listet som kort.
+  const akt = activitiesFor(a.id).filter(x => !x.kilde);
   const total = totalAktivitetsPris(a.id);
 
   if (akt.length === 0) {
